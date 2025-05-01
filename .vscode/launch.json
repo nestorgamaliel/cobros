@@ -1,0 +1,21 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Python: Servidor Flask",
+			"type": "python",
+			"request": "launch",
+			"program": "${workspaceFolder}/sistema_cobros.py",
+			"args": ["servidor"],
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "Python: Registrar Pago",
+			"type": "python",
+			"request": "launch",
+			"program": "${workspaceFolder}/sistema_cobros.py",
+			"args": ["pago", "--credito_id", "39", "--monto", "70"],
+			"console": "integratedTerminal"
+		}
+	]
+}
