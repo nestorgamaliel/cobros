@@ -1,0 +1,149 @@
+# Instrucciones de uso del Sistema de Gestión de Cobros Crediticios
+
+Este sistema permite gestionar pagos de créditos y generar automáticamente recibos en formato PDF.
+
+## Instalación
+
+1. **Clonar el repositorio**
+
+   Primero, clone el repositorio en su máquina local.
+
+2. **Crear un entorno virtual**
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # En Windows: venv\Scripts\activate
+   ```
+
+3. **Instalar dependencias**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configurar variables de entorno**
+
+   Copie el archivo de ejemplo `.env.example` a `.env` y modifique los valores según su entorno:
+
+   ```bash
+   cp .env.example .env
+   # Edite .env con su configuración
+   ```
+
+## Uso
+
+### Crear las tablas en la base de datos
+
+Antes de usar el sistema, debe crear las tablas en la base de datos:
+
+```bash
+python run.py crear_tablas
+```
+
+### Comprobar la conexión a la base de datos
+
+Puede verificar si la conexión a la base de datos está funcionando correctamente:
+
+```bash
+python run.py comprobar_conexion
+```
+
+### Registrar un pago
+
+Para registrar un nuevo pago desde la línea de comandos:
+
+```bash
+python run.py pago --credito_id 39 --monto 70 --fecha 2025-04-29
+```
+
+Si no se especifica la fecha, se utilizará la fecha actual.
+
+### Iniciar el servidor web
+
+Para iniciar el servidor web y usar la API REST:
+
+```bash
+python run.py servidor --host 0.0.0.0 --port 5000
+```
+
+## API REST
+
+El sistema proporciona una API REST para interactuar con él desde otras aplicaciones.
+
+### Registrar un pago
+
+**Endpoint:** `POST /api/pago`
+
+**Datos:**
+```json
+{
+  "credito_id": 39,
+  "monto": 70,
+  "fecha": "2025-04-29"  // Opcional, por defecto es la fecha actual
+}
+```
+
+**Respuesta:**
+```json
+{
+  "mensaje": "Pago registrado correctamente",
+  "recibo": "recibo_pago_123_20250429123456.pdf",
+  "ruta_recibo": "recibos/recibo_pago_123_20250429123456.pdf"
+}
+```
+
+### Descargar un recibo
+
+**Endpoint:** `GET /api/recibo/{nombre_recibo}`
+
+Este endpoint devuelve el archivo PDF del recibo para descargarlo.
+
+## Estructura del proyecto
+
+El proyecto está organizado de la siguiente manera:
+
+```
+sistema_cobros/
+│
+├── requirements.txt            # Dependencias del proyecto
+├── README.md                   # Documentación del proyecto
+├── config.py                   # Configuración global
+├── run.py                      # Punto de entrada de la aplicación
+│
+├── app/                        # Paquete principal de la aplicación
+│   ├── __init__.py             # Inicialización de la aplicación
+│   ├── api/                    # Endpoints de la API
+│   │   ├── __init__.py
+│   │   └── routes.py           # Rutas de la API
+│   │
+│   ├── models/                 # Modelos de datos
+│   │   ├── __init__.py
+│   │   └── models.py           # Definición de modelos SQLAlchemy
+│   │
+│   ├── services/               # Lógica de negocio
+│   │   ├── __init__.py
+│   │   ├── db_service.py       # Servicio de base de datos
+│   │   ├── pago_service.py     # Servicio de gestión de pagos
+│   │   └── pdf_service.py      # Servicio para generar PDFs
+│   │
+│   └── utils/                  # Utilidades generales
+│       ├── __init__.py
+│       └── logger.py           # Configuración de logging
+│
+└── recibos/                    # Directorio para almacenar los recibos generados
+```
+
+## Extensión del sistema
+
+Este sistema está diseñado con una arquitectura modular para facilitar su extensión:
+
+1. **Añadir nuevos endpoints a la API**: Extienda el archivo `app/api/routes.py`.
+2. **Añadir nuevos modelos de datos**: Cree nuevas clases en `app/models/models.py`.
+3. **Añadir nuevos servicios**: Cree nuevos archivos en el directorio `app/services/`.
+
+## Ejemplos de extensiones futuras
+
+- Implementar autenticación y autorización
+- Añadir reportes y estadísticas de pagos
+- Implementar notificaciones por correo electrónico
+- Añadir una interfaz web para administración

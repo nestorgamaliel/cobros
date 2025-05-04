@@ -1,0 +1,28 @@
+sistema_cobros/
+│
+├── requirements.txt            # Dependencias del proyecto
+├── README.md                   # Documentación del proyecto
+├── config.py                   # Configuración global
+├── run.py                      # Punto de entrada de la aplicación
+│
+├── app/                        # Paquete principal de la aplicación
+│   ├── __init__.py             # Inicialización de la aplicación
+│   ├── api/                    # Endpoints de la API
+│   │   ├── __init__.py
+│   │   └── routes.py           # Rutas de la API
+│   │
+│   ├── models/                 # Modelos de datos
+│   │   ├── __init__.py
+│   │   └── models.py           # Definición de modelos SQLAlchemy
+│   │
+│   ├── services/               # Lógica de negocio
+│   │   ├── __init__.py
+│   │   ├── db_service.py       # Servicio de base de datos
+│   │   ├── pago_service.py     # Servicio de gestión de pagos
+│   │   └── pdf_service.py      # Servicio para generar PDFs
+│   │
+│   └── utils/                  # Utilidades generales
+│       ├── __init__.py
+│       └── logger.py           # Configuración de logging
+│
+└── recibos/                    # Directorio para almacenar los recibos generados
