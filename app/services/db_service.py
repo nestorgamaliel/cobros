@@ -21,9 +21,10 @@ class BaseDatos:
         """
         logger.info(db_url)
         self.engine = create_engine(db_url, pool_pre_ping=True)
-        self.Session = sessionmaker(bind=self.engine)
+        self.Session = sessionmaker(bind=self.engine, expire_on_commit=False)
         self.session = self.Session()
-        logger.info("Servicio de base de datos inicializado")
+        logger.info("Servicio de base de datos inicializado")        
+        
         
     def crear_tablas(self):
         """Crea las tablas en la base de datos si no existen."""
@@ -109,9 +110,69 @@ class BaseDatos:
         Returns:
             persona: Objeto Persona encontrado o None si no existe.
         """
-        return self.session.query(Persona).filter_by(persona_id=persona_id).first()
-    
+        return self.session.query(Persona).filter_by(persona_id=persona_id).first()        
+
+    def obtener_datos_credito(self, credito_id):
+        """
+        Obtiene los datos completos del crédito incluyendo 
+        información de pagos y saldos.
+        
+        Args:
+            credito_id (int): ID del crédito.
+            
+        Returns:
+            dict: Diccionario con la información del crédito.
+        """
+        # SQL query directa para obtener todos los datos necesarios
+        # en una sola consulta
+        sql = text("""
+            SELECT a.credito_id,
+                   b.nombres || ' ' || b.apellidos AS cliente,
+                   a.fecha AS fecha_credito,
+                   a.total_credito_proyectado,
+                   a.dia_pago,
+                   a.cuota,
+                   c.ultima_fecha_pago,
+                   (a.total_credito_proyectado - COALESCE(c.pagado, 0)) AS saldo
+            FROM credito a
+            LEFT JOIN persona b ON (a.persona_id = b.persona_id)
+            LEFT JOIN (
+                SELECT credito_id,
+                       SUM(monto) AS pagado,
+                       MAX(fecha) AS ultima_fecha_pago
+                FROM pago
+                GROUP BY credito_id
+            ) c ON (a.credito_id = c.credito_id)
+            WHERE a.credito_id = :credito_id
+        """)
+        
+        try:
+            result = self.session.execute(sql, {"credito_id": credito_id}).fetchone()
+            
+            if not result:
+                raise ValueError(f"No se encontró información para el crédito ID {credito_id}")
+            
+            # Convertir el resultado a diccionario
+            datos = {
+                'credito_id': result.credito_id,
+                'cliente': result.cliente,
+                'fecha_credito': result.fecha_credito,
+                'total_credito_proyectado': result.total_credito_proyectado,
+                'dia_pago': result.dia_pago,
+                'cuota': result.cuota,
+                'ultima_fecha_pago': result.ultima_fecha_pago,
+                'saldo': result.saldo if result.saldo is not None else result.total_credito_proyectado
+            }
+            
+            logger.info(f"Datos del crédito {credito_id} obtenidos correctamente")
+            return datos
+            
+        except Exception as e:
+            logger.error(f"Error al obtener datos del crédito {credito_id}: {str(e)}")
+            raise                
+        
     def cerrar(self):
         """Cierra la sesion de la base de datos."""
         self.session.close()
         logger.info("Sesion de base de datos cerrada")
+        

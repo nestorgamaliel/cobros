@@ -24,3 +24,6 @@ RECIBOS_DIR = os.environ.get('RECIBOS_DIR', 'recibos')
 
 # Asegurar que el directorio de recibos exista
 os.makedirs(RECIBOS_DIR, exist_ok=True)
+
+# Ruta al logo de la empresa
+LOGO_PATH = os.path.join('recursos', 'Lender_logo.jpg')

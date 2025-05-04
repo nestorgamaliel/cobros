@@ -1,6 +1,7 @@
 from app.services.db_service import BaseDatos
 from app.services.pdf_service import GeneradorRecibos
 from app.utils.logger import setup_logger
+from sqlalchemy import text
 
 # Configurar logger
 logger = setup_logger(__name__)
@@ -31,7 +32,8 @@ class ServicioPagos:
             monto (float): Monto del pago.
             
         Returns:
-            tuple: (ruta_recibo, nombre_recibo) con las rutas del recibo generado,
+            tuple: (ruta_recibo, nombre_recibo) con las rutas del recibo 
+            generado,
                    o (None, mensaje_error) en caso de error.
         """
         try:
@@ -44,16 +46,27 @@ class ServicioPagos:
                 logger.error(f"No se encontro el crédito con ID: {credito_id}")
                 return None, "Error: Crédito no encontrado"
             
-            persona = self.db.obtener_persona(credito.persona_id)
+            persona = self.db.obtener_persona(credito.persona_id)                        
             if not persona:
                 logger.error(f"No se encontro el persona con ID: {
                     credito.persona_id}")
                 return None, "Error: persona no encontrado"
+                        
+            # Obtener datos adicionales del crédito
+            datos_credito = self.db.obtener_datos_credito(credito.credito_id)
+        
+            # Preparar los datos adicionales para el recibo
+            datos_adicionales = {
+                'ultima_fecha_pago': datos_credito.get('ultima_fecha_pago'),
+                'saldo': datos_credito.get('saldo', 0),
+                'dia_pago': datos_credito.get('dia_pago'),
+                'cuota': datos_credito.get('cuota', 0)
+            }                        
             
             # Generar el recibo de pago
             ruta_recibo, nombre_recibo = \
                 self.generador_recibos.generar_recibo_pdf(pago, credito, 
-                                                          persona)
+                                                          persona, datos_adicionales)
             logger.info(f"Pago registrado correctamente. ID: {pago.pago_id}, \
                         Crédito: {credito_id}, Monto: {monto}")
             return ruta_recibo, nombre_recibo
@@ -61,3 +74,4 @@ class ServicioPagos:
         except Exception as e:
             logger.error(f"Error al registrar pago: {str(e)}")
             return None, f"Error: {str(e)}"
+           

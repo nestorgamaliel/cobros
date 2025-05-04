@@ -33,6 +33,8 @@ class Credito(Base):
     total_credito_proyectado = Column(Float)
     fecha = Column(Date)
     cancelado = Column(String)
+    dia_pago = Column(Integer)
+    cuota = Column(Float)
     
     # Relaciones
     pagos = relationship("Pago", back_populates="credito")
