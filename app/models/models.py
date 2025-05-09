@@ -15,7 +15,9 @@ class Persona(Base):
     apellidos = Column(String)
     direccion = Column(String)
     telefono = Column(String)
-    
+    fecha_nacimiento = Column(Date)
+    sexo = Column(String)
+
     # Relacion con Credito
     creditos = relationship("Credito", back_populates="persona")
     

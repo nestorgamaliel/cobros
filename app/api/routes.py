@@ -2,6 +2,7 @@ import os
 import datetime
 from flask import Blueprint, request, jsonify, send_file
 from app.services import ServicioPagos
+from app.services import ServicioPersonas
 from app.utils.logger import setup_logger
 
 # Configurar logger
@@ -12,17 +13,22 @@ api_blueprint = Blueprint('api', __name__)
 
 # Referencia al servicio de pagos (se inicializará en app/__init__.py)
 pago_service = None
+persona_service = None
 
 
-def init_routes(servicio_pagos):
+def init_routes(servicio_pagos, servicio_personas):
     """
-    Inicializa las rutas con el servicio de pagos.
+    Inicializa las rutas con el servicio de pagos, personas.
     
     Args:
         servicio_pagos (ServicioPagos): Servicio de gestion de pagos.
+        servicio_personas (ServicioPersonas): Servicio de gestion de personas.
     """
     global pago_service
+    global persona_service
+    # Asignar los servicios a las variables globales
     pago_service = servicio_pagos
+    persona_service = servicio_personas
     logger.info("Rutas de la API inicializadas")
     return api_blueprint
 
@@ -87,3 +93,62 @@ def obtener_recibo(nombre_recibo):
     except Exception as e:
         logger.error(f"Error en endpoint /recibo/{nombre_recibo}: {str(e)}")
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
+    
+    
+@api_blueprint.route('/persona', methods=['POST'])
+def crear_persona():
+    """
+    Endpoint para registrar una nueva persona.
+   
+    Returns:
+        Response: Respuesta JSON con el resultado de la operación.
+    """
+    try:
+        datos = request.get_json()
+        
+        # Extraer datos de la persona
+        nombres = datos.get('nombres')
+        apellidos = datos.get('apellidos')
+        fecha_nacimiento = datos.get('fecha_nacimiento')
+        direccion = datos.get('direccion')
+        telefono = datos.get('telefono')
+        sexo = datos.get('sexo')
+        
+        # Validar datos requeridos
+        if not nombres:
+            return jsonify({
+                'error': 'Faltan datos requeridos (nombres)'
+            }), 400
+        
+        # Llamar al servicio para crear la persona
+        resultado, error = persona_service.crear_persona(
+            nombres=nombres,
+            apellidos=apellidos,
+            sexo=sexo,
+            fecha_nacimiento=fecha_nacimiento,
+            direccion=direccion,
+            telefono=telefono,
+        )
+        
+        # Comprobar resultado y devolver respuesta adecuada
+        if resultado:
+            # Convert SQLAlchemy object to dictionary for JSON serialization
+            return jsonify({
+                'mensaje': 'Persona registrada correctamente',
+                'persona_id': resultado.persona_id,
+                'datos': {
+                    'nombres': resultado.nombres,
+                    'apellidos': resultado.apellidos,
+                    'fecha_nacimiento': str(resultado.fecha_nacimiento) if
+                    resultado.fecha_nacimiento else None,
+                    'direccion': resultado.direccion,
+                    'telefono': resultado.telefono,
+                    'sexo': resultado.sexo
+                }
+            }), 201
+        else:
+            # If error is a string, return it directly
+            return jsonify({'error': error}), 400
+    except Exception as e:
+        logger.error(f"Error en endpoint /persona: {str(e)}")
+        return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500    

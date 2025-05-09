@@ -171,6 +171,51 @@ class BaseDatos:
             logger.error(f"Error al obtener datos del crédito {credito_id}: {str(e)}")
             raise                
         
+    def insertar_persona(self,
+                         nombres,
+                         apellidos,
+                         fecha_nacimiento,
+                         sexo,
+                         telefono,
+                         direccion):
+        """
+        Inserta una nueva persona en la base de datos.
+        
+        Args:
+            nombres,
+            apellidos,
+            fecha_nacimiento,
+            sexo,
+            telefono,
+            direccion):
+
+        Returns:
+            Pago: Objeto Pago insertado.
+        """
+        try:
+            # Convertir la fecha si viene como string
+            if isinstance(fecha_nacimiento, str):
+                fecha_nacimiento = datetime.datetime.strptime(fecha_nacimiento,
+                                                              '%Y-%m-%d').date()
+                
+            nueva_persona = Persona(nombres=nombres,
+                                    apellidos=apellidos,
+                                    fecha_nacimiento=fecha_nacimiento,
+                                    sexo=sexo,
+                                    telefono=telefono,
+                                    direccion=direccion)
+            self.session.add(nueva_persona)
+            self.session.commit()    
+            logger.info(f"Persona insertada correctamente con ID:\
+                {nueva_persona.persona_id}")
+            return nueva_persona
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Error al insertar persona: {str(e)}")
+            raise
+        
+        
+        
     def cerrar(self):
         """Cierra la sesion de la base de datos."""
         self.session.close()

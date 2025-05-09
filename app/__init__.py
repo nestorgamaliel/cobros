@@ -1,6 +1,7 @@
 import os
 from flask import Flask
 from app.services import BaseDatos, GeneradorRecibos, ServicioPagos
+from app.services import ServicioPersonas
 from app.api import init_routes
 from app.utils.logger import setup_logger
 import config
@@ -12,6 +13,7 @@ logger = setup_logger(__name__)
 db_service = None
 pdf_service = None
 pago_service = None
+persona_service = None
 
 
 def create_app(test_config=None):
@@ -40,8 +42,9 @@ def create_app(test_config=None):
                           app.config.get('RECIBOS_DIR', config.RECIBOS_DIR))
     
     # Registrar blueprint de la API
-    app.register_blueprint(init_routes(pago_service), url_prefix='/api')
-    
+    app.register_blueprint(init_routes(pago_service, persona_service),
+                           url_prefix='/api')
+        
     # Ruta de inicio para verificar que la aplicacion está funcionando
     @app.route('/')
     def index():
@@ -60,7 +63,7 @@ def inicializar_servicios(db_url, recibos_dir):
         db_url (str): URL de conexion a la base de datos.
         recibos_dir (str): Directorio donde se guardarán los recibos.
     """
-    global db_service, pdf_service, pago_service
+    global db_service, pdf_service, pago_service, persona_service
     
     # Inicializar el servicio de base de datos
     db_service = BaseDatos(db_url)
@@ -70,6 +73,11 @@ def inicializar_servicios(db_url, recibos_dir):
     
     # Inicializar el servicio de pagos
     pago_service = ServicioPagos(db_service, pdf_service)
+    
+    # Inicializar el servicio de personas
+    persona_service = ServicioPersonas(db_service)
+    
+    # Inicializar el servicio de gestion de personas
     
     logger.info("Servicios inicializados correctamente")
     
@@ -102,3 +110,13 @@ def get_pago_service():
         ServicioPagos: Instancia del servicio de gestion de pagos.
     """
     return pago_service
+
+
+def get_persona_service():
+    """
+    Obtiene el servicio de personas.
+    
+    Returns:
+        ServicioPersonas: Instancia del servicio de gestion de personas.
+    """
+    return persona_service

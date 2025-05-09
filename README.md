@@ -4,6 +4,7 @@ Sistema modular para gestionar pagos de créditos y generar recibos en formato P
 
 ## Características
 
+- Registro de clientes
 - Registro de pagos de créditos
 - Generación automática de recibos en PDF
 - API REST para integración con otros sistemas
