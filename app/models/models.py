@@ -37,6 +37,15 @@ class Credito(Base):
     cancelado = Column(String)
     dia_pago = Column(Integer)
     cuota = Column(Float)
+    tasa_interes = Column(Float)
+    monto_solicitado = Column(Float)
+    numero_cuotas = Column(Integer)
+    comision_asistencia_financiera = Column(Float) 
+    comision_administrativa = Column(Float)
+    monto_colocado = Column(Float)
+    monto_intereses = Column(Float)
+    privado = Column(Integer) 
+    observaciones = Column(Integer)    
     
     # Relaciones
     pagos = relationship("Pago", back_populates="credito")

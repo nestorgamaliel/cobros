@@ -214,6 +214,62 @@ class BaseDatos:
             logger.error(f"Error al insertar persona: {str(e)}")
             raise
         
+    def insertar_credito(self,
+                         persona_id,
+                         fecha,
+                         tasa_interes,
+                         monto_solicitado,
+                         numero_cuotas,
+                         comision_asistencia_financiera,
+                         comision_administrativa,
+                         monto_colocado,
+                         monto_intereses,
+                         total_credito_proyectado,
+                         cuota,
+                         dia_pago,
+                         cancelado,
+                         privado,
+                         observaciones):
+        """
+        Inserta un nuevo credito en la base de datos.
+        
+        Args:
+
+        Returns:
+            Pago: Objeto Pago insertado.
+        """
+        try:
+            # Convertir la fecha si viene como string
+            if isinstance(fecha, str):
+                fecha = datetime.datetime.strptime(fecha,
+                                                   '%Y-%m-%d').date()
+                
+            nuevo_credito = Credito(
+                                    persona_id=persona_id,
+                                    fecha=fecha,
+                                    tasa_interes=tasa_interes,
+                                    monto_solicitado=monto_solicitado,
+                                    numero_cuotas=numero_cuotas,
+                                    comision_asistencia_financiera=comision_asistencia_financiera, 
+                                    comision_administrativa=comision_administrativa, 
+                                    monto_colocado=monto_colocado, 
+                                    monto_intereses=monto_intereses,
+                                    total_credito_proyectado=total_credito_proyectado, 
+                                    cuota=cuota, 
+                                    dia_pago=dia_pago, 
+                                    cancelado=cancelado, 
+                                    privado=privado, 
+                                    observaciones=observaciones                                    
+                                    )
+            self.session.add(nuevo_credito)
+            self.session.commit()    
+            logger.info(f"Credito insertado correctamente con ID:\
+                {nuevo_credito.credito_id}")
+            return nuevo_credito
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Error al insertar credito: {str(e)}")
+            raise
         
         
     def cerrar(self):

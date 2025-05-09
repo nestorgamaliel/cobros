@@ -3,7 +3,6 @@ from app.services.db_service import BaseDatos
 from app.utils.logger import setup_logger
 
 
-
 # Configurar logger
 logger = setup_logger(__name__)
 
