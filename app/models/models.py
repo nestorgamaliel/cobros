@@ -65,10 +65,11 @@ class Pago(Base):
     credito_id = Column(Integer, ForeignKey('credito.credito_id'))
     fecha = Column(Date)
     monto = Column(Float)
+    multa = Column(Float)
     
     # Relacion con Credito
     credito = relationship("Credito", back_populates="pagos")
     
     def __repr__(self):
         return f"<Pago(pago_id={self.pago_id}, credito_id={self.credito_id}, \
-            monto={self.monto})>"
+            monto={self.monto}, multa={self.multa})>"

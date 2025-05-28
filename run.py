@@ -68,7 +68,8 @@ def main():
         ruta_recibo, nombre_recibo = pago_service.registrar_pago(
             args.credito_id, 
             args.fecha or datetime.datetime.now().strftime('%Y-%m-%d'), 
-            args.monto
+            args.monto,
+            args.multa
         )
         
         if ruta_recibo:

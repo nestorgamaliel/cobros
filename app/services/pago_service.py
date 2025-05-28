@@ -22,7 +22,7 @@ class ServicioPagos:
         self.generador_recibos = pdf_service
         logger.info("Servicio de pagos inicializado")
         
-    def registrar_pago(self, credito_id, fecha, monto):
+    def registrar_pago(self, credito_id, fecha, monto, multa):
         """
         Registra un nuevo pago y genera el recibo correspondiente.
         
@@ -30,6 +30,7 @@ class ServicioPagos:
             credito_id (int): ID del crédito al que corresponde el pago.
             fecha (str/date): Fecha del pago.
             monto (float): Monto del pago.
+            multa (float): Monto de la multa, si aplica.
             
         Returns:
             tuple: (ruta_recibo, nombre_recibo) con las rutas del recibo 
@@ -38,7 +39,7 @@ class ServicioPagos:
         """
         try:
             # Insertar el pago en la base de datos
-            pago = self.db.insertar_pago(credito_id, fecha, monto)
+            pago = self.db.insertar_pago(credito_id, fecha, monto, multa)
             
             # Obtener informacion relacionada
             credito = self.db.obtener_credito(credito_id)
@@ -60,7 +61,7 @@ class ServicioPagos:
                 'ultima_fecha_pago': datos_credito.get('ultima_fecha_pago'),
                 'saldo': datos_credito.get('saldo', 0),
                 'dia_pago': datos_credito.get('dia_pago'),
-                'cuota': datos_credito.get('cuota', 0)
+                'cuota': datos_credito.get('cuota', 0),
             }                        
             
             # Generar el recibo de pago

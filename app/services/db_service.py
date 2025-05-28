@@ -48,7 +48,7 @@ class BaseDatos:
             logger.error(f"Error al conectar con la base de datos: {str(e)}")
             return False
         
-    def insertar_pago(self, credito_id, fecha, monto):
+    def insertar_pago(self, credito_id, fecha, monto, multa):
         """
         Inserta un nuevo pago en la base de datos.
         
@@ -56,6 +56,7 @@ class BaseDatos:
             credito_id (int): ID del crédito al que corresponde el pago.
             fecha (str/date): Fecha del pago.
             monto (float): Monto del pago.
+            multa (float): Pago adicional por extemporalidad.
             
         Returns:
             Pago: Objeto Pago insertado.
@@ -65,7 +66,8 @@ class BaseDatos:
             if isinstance(fecha, str):
                 fecha = datetime.datetime.strptime(fecha, '%Y-%m-%d').date()
                 
-            nuevo_pago = Pago(credito_id=credito_id, fecha=fecha, monto=monto)
+            nuevo_pago = Pago(credito_id=credito_id, fecha=fecha, monto=monto,
+                              multa=multa)
             self.session.add(nuevo_pago)
             self.session.commit()
             logger.info(f"Pago insertado correctamente con ID:\
