@@ -68,8 +68,8 @@ class ServicioCreditos:
                 return None, "Día de pago no puede ser negativo o mayor a 31"
             if cancelado and cancelado not in [0, 1]:
                 return None, "Cancelado debe ser 0 o 1"
-            if privado and privado not in [0, 1]:
-                return None, "Privado debe ser 0 o 1"
+            if privado and privado not in [0, 1, 2]:
+                return None, "Privado debe ser 0 o 1 o 2"
                 
             
             # Convertir fecha si viene como string
