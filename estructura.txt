@@ -4,6 +4,7 @@ sistema_cobros/
 ├── README.md                   # Documentación del proyecto
 ├── config.py                   # Configuración global
 ├── run.py                      # Punto de entrada de la aplicación
+├── .env	                    # Datos del ambiente
 │
 ├── app/                        # Paquete principal de la aplicación
 │   ├── __init__.py             # Inicialización de la aplicación
@@ -25,4 +26,15 @@ sistema_cobros/
 │       ├── __init__.py
 │       └── logger.py           # Configuración de logging
 │
+├── __pycache__/                
+├── source/						# Datos venv                
+│   ├── Lib/		            # Librerias
+│   ├── Scripts/	            # Librerias
+│   ├── Lib/		            # Librerias
+│   ├── Share/		            # Librerias
+├── venv/						# Ambiente
+├── .github/					# github
+├── .vscode/					# vscode
+├── recursos/					# imagenes
+│   ├── lender_logo.jpg         # Librerias
 └── recibos/                    # Directorio para almacenar los recibos generados
