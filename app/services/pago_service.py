@@ -49,8 +49,7 @@ class ServicioPagos:
             
             persona = self.db.obtener_persona(credito.persona_id)                        
             if not persona:
-                logger.error(f"No se encontro el persona con ID: {
-                    credito.persona_id}")
+                logger.error(f"No se encontro el persona con ID: {credito.persona_id}")
                 return None, "Error: persona no encontrado"
                         
             # Obtener datos adicionales del crédito
