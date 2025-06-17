@@ -239,8 +239,7 @@ class GeneradorRecibos:
         doc.build(elements)
         
         # Guardar el PDF en un archivo
-        nombre_archivo = f"recibo_pago_{pago.pago_id}\
-            _{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        nombre_archivo = f"recibo_pago_{pago.pago_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
         ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
         
         with open(ruta_archivo, 'wb') as f:
@@ -251,7 +250,8 @@ class GeneradorRecibos:
         logger.info("Subiendo recibo a Google Cloud Storage...")
         
         # Dentro de tu método generar_recibo_pdf, justo antes del return:
-        bucket_name = config.GCS_BUCKET_NAME  # define esto en config.py
+        # bucket_name = config.GCS_BUCKET_NAME  # define esto en config.py
+        bucket_name = config.GCS_BUCKET_NAME
         destino = f"recibos/{nombre_archivo}"
         url_publica = subir_archivo_a_gcs(ruta_archivo, destino, bucket_name)
 

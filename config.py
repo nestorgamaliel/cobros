@@ -29,4 +29,5 @@ os.makedirs(RECIBOS_DIR, exist_ok=True)
 LOGO_PATH = os.path.join('recursos', 'Lender_logo.jpg')
 
 # Nombre de tu bucket GCS (sin gs://)
-GCS_BUCKET_NAME = "recibos-nestor-gcp"
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "recibos-nestor-gcp")
+GCS_PUBLIC_URL_BASE = os.getenv("GCS_PUBLIC_URL_BASE", "https://storage.googleapis.com/recibos-nestor-gcp")
