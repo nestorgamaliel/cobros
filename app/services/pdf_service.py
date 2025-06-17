@@ -9,8 +9,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, cm
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from app.utils.logger import setup_logger
+from app.utils.gcs_uploader import subir_archivo_a_gcs
 import config
-
 # Configurar logger
 logger = setup_logger(__name__)
 
@@ -248,5 +248,12 @@ class GeneradorRecibos:
         
         buffer.close()
         logger.info(f"Recibo generado correctamente: {ruta_archivo}")
+        logger.info("Subiendo recibo a Google Cloud Storage...")
         
-        return ruta_archivo, nombre_archivo
+        # Dentro de tu método generar_recibo_pdf, justo antes del return:
+        bucket_name = config.GCS_BUCKET_NAME  # define esto en config.py
+        destino = f"recibos/{nombre_archivo}"
+        url_publica = subir_archivo_a_gcs(ruta_archivo, destino, bucket_name)
+
+        logger.info(f"PDF subido correctamente: {url_publica}")
+        return ruta_archivo, nombre_archivo, url_publica
