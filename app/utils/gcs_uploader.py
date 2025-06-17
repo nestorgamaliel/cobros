@@ -20,6 +20,6 @@ def subir_archivo_a_gcs(ruta_local, nombre_destino, bucket_name):
     # Sube el archivo
     blob.upload_from_filename(ruta_local)
     # Asegura que sea público
-    blob.make_public()
+    # blob.make_public()
 
     return blob.public_url
