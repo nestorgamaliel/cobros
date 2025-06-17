@@ -58,7 +58,7 @@ def registrar_pago():
             return jsonify({'error': 'Faltan datos requeridos (credito_id, \
                             monto)'}), 400
         
-        ruta_recibo, nombre_recibo = pago_service.registrar_pago(credito_id,
+        ruta_recibo, nombre_recibo, url_publica = pago_service.registrar_pago(credito_id,
                                                                  fecha, monto,
                                                                  multa)
         
@@ -66,7 +66,8 @@ def registrar_pago():
             return jsonify({
                 'mensaje': 'Pago registrado correctamente',
                 'recibo': nombre_recibo,
-                'ruta_recibo': ruta_recibo
+                'ruta_recibo': ruta_recibo,
+                'url_publica': url_publica
             }), 201
         else:
             return jsonify({'error': nombre_recibo}), 400

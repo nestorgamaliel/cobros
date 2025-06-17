@@ -65,7 +65,7 @@ def main():
     
     # Ejecutar el comando correspondiente
     if args.comando == 'pago':
-        ruta_recibo, nombre_recibo = pago_service.registrar_pago(
+        ruta_recibo, nombre_recibo, url_publica = pago_service.registrar_pago(
             args.credito_id, 
             args.fecha or datetime.datetime.now().strftime('%Y-%m-%d'), 
             args.monto,

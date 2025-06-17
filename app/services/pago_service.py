@@ -64,12 +64,12 @@ class ServicioPagos:
             }                        
             
             # Generar el recibo de pago
-            ruta_recibo, nombre_recibo = \
+            ruta_recibo, nombre_recibo, url_publica  = \
                 self.generador_recibos.generar_recibo_pdf(pago, credito, 
                                                           persona, datos_adicionales)
             logger.info(f"Pago registrado correctamente. ID: {pago.pago_id}, \
                         Crédito: {credito_id}, Monto: {monto}")
-            return ruta_recibo, nombre_recibo
+            return ruta_recibo, nombre_recibo, url_publica
             
         except Exception as e:
             logger.error(f"Error al registrar pago: {str(e)}")
