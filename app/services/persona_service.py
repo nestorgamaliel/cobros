@@ -62,7 +62,7 @@ class ServicioPersonas:
                 fecha_nacimiento=fecha_nacimiento,
                 sexo=sexo,
                 telefono=telefono,
-                direccion=direccion
+                direccion=direccion,
                 dui=dui
             )
             
