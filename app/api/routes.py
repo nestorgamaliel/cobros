@@ -121,6 +121,7 @@ def crear_persona():
         direccion = datos.get('direccion')
         telefono = datos.get('telefono')
         sexo = datos.get('sexo')
+        dui = datos.get('dui')  
         
         # Validar datos requeridos
         if not nombres:
@@ -136,6 +137,7 @@ def crear_persona():
             fecha_nacimiento=fecha_nacimiento,
             direccion=direccion,
             telefono=telefono,
+            dui=dui
         )
         
         # Comprobar resultado y devolver respuesta adecuada
@@ -151,7 +153,8 @@ def crear_persona():
                     resultado.fecha_nacimiento else None,
                     'direccion': resultado.direccion,
                     'telefono': resultado.telefono,
-                    'sexo': resultado.sexo
+                    'sexo': resultado.sexo,
+                    'dui': resultado.dui
                 }
             }), 201
         else:

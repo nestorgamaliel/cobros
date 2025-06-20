@@ -21,7 +21,7 @@ class ServicioPersonas:
         logger.info("Servicio de personas inicializado")
     
     def crear_persona(self, nombres, apellidos, fecha_nacimiento=None, 
-                      sexo=None, telefono=None, direccion=None):
+                      sexo=None, telefono=None, direccion=None, dui=None):
         """
         Crea una nueva persona en la base de datos.
         
@@ -32,6 +32,7 @@ class ServicioPersonas:
             sexo (str, opcional): Sexo de la persona ('M' o 'F').
             telefono (str, opcional): Número de teléfono.
             direccion (str, opcional): Dirección de residencia.
+            dui (str, opcional): Número de DUI.
             
         Returns:
             tuple: (persona, None) en caso de éxito, o (None, mensaje_error) 
@@ -62,6 +63,7 @@ class ServicioPersonas:
                 sexo=sexo,
                 telefono=telefono,
                 direccion=direccion
+                dui=dui
             )
             
             logger.info(f"Persona creada correctamente. ID:\

@@ -147,3 +147,30 @@ Este sistema está diseñado con una arquitectura modular para facilitar su exte
 - Añadir reportes y estadísticas de pagos
 - Implementar notificaciones por correo electrónico
 - Añadir una interfaz web para administración
+
+
+
+
+# Para el despliegue, desde de GCP Console
+
+git pull origin master
+
+gcloud auth login
+
+
+gcloud builds submit --tag gcr.io/daring-pier-461615-d0/cobros
+
+
+gcloud run deploy cobros \
+  --image gcr.io/daring-pier-461615-d0/cobros \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --port 8080 \
+  --env-vars-file env.yaml
+
+#Facturación
+https://console.cloud.google.com/billing 
+https://console.cloud.google.com/billing/reports
+
+

@@ -179,7 +179,8 @@ class BaseDatos:
                          fecha_nacimiento,
                          sexo,
                          telefono,
-                         direccion):
+                         direccion,
+                         dui):
         """
         Inserta una nueva persona en la base de datos.
         
@@ -205,7 +206,8 @@ class BaseDatos:
                                     fecha_nacimiento=fecha_nacimiento,
                                     sexo=sexo,
                                     telefono=telefono,
-                                    direccion=direccion)
+                                    direccion=direccion,
+                                    dui=dui)
             self.session.add(nueva_persona)
             self.session.commit()    
             logger.info(f"Persona insertada correctamente con ID:\

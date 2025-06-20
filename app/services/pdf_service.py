@@ -117,7 +117,7 @@ class GeneradorRecibos:
         persona_info = [
             ["INFORMACIÓN DEL CLIENTE"],
             [f"Nombre: {persona.nombres} {persona.apellidos}"],
-            [f"Dirección: {persona.direccion}"],
+            [f"DUI: {persona.dui}"],
             [f"Teléfono: {persona.telefono}"]
         ]
         
