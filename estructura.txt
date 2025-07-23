@@ -3,14 +3,18 @@ sistema_cobros/
 ├── requirements.txt            # Dependencias del proyecto
 ├── README.md                   # Documentación del proyecto
 ├── config.py                   # Configuración global
-├── run.py                      # Punto de entrada de la aplicación
-├── .env	                    # Datos del ambiente
-│
+├── wsgi.py                     # Configuración global
+├── instrucciones.txt           # Configuración global
+├── estructura.txt              # Estructura
+├── env.yaml                    # Informacion para despliegue
+├── Dockerfile                  # 
+├── Ambiente.scr                # Ambiente
 ├── app/                        # Paquete principal de la aplicación
 │   ├── __init__.py             # Inicialización de la aplicación
 │   ├── api/                    # Endpoints de la API
 │   │   ├── __init__.py
 │   │   └── routes.py           # Rutas de la API
+│   │   └── rutas_personas.py           # Rutas de la API
 │   │
 │   ├── models/                 # Modelos de datos
 │   │   ├── __init__.py
@@ -18,15 +22,20 @@ sistema_cobros/
 │   │
 │   ├── services/               # Lógica de negocio
 │   │   ├── __init__.py
-│   │   ├── db_service.py       # Servicio de base de datos
-│   │   ├── pago_service.py     # Servicio de gestión de pagos
-│   │   └── pdf_service.py      # Servicio para generar PDFs
+│   │   ├── credito_service.py  # Servicio de gestion de creditos
+│   │   ├── db_service.py       # Servicio de gestión de base de datos
+│   │   └── pago_service.py     # Servicio de gestion de pago
+│   │   └── pdf_service.py      # Servicio para generar 
+│   │   └── persona_service.py  # Servicio de gestion de persona
 │   │
 │   └── utils/                  # Utilidades generales
 │       ├── __init__.py
+│       └── gcr_uploader.py     # Configuración de logging
 │       └── logger.py           # Configuración de logging
 │
-├── __pycache__/                
+├── __pycache__/       
+│       ├── __init__.cpython.312.__pyc
+│       ├── __init__.cpython.313.__pyc
 ├── source/						# Datos venv                
 │   ├── Lib/		            # Librerias
 │   ├── Scripts/	            # Librerias
@@ -38,3 +47,4 @@ sistema_cobros/
 ├── recursos/					# imagenes
 │   ├── lender_logo.jpg         # Librerias
 └── recibos/                    # Directorio para almacenar los recibos generados
+```
