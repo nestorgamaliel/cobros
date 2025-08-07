@@ -148,7 +148,7 @@ class GeneradorRecibos:
                             {fecha_credito}"],
             [f"Monto total: ${credito.total_credito_proyectado:,.2f}", f"Día \
                 de pago: {dia_pago}"],
-            [f"Cuota mensual: ${cuota:,.2f}", ""]
+            [f"Cuota: ${cuota:,.2f}", ""]
         ]
         
         t_credito = Table(credito_info, colWidths=[225, 225])
