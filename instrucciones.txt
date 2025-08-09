@@ -174,16 +174,19 @@ Este sistema está diseñado con una arquitectura modular para facilitar su exte
 
 
 
-# Para el despliegue, desde de GCP Console
+# Para el despliegue, desde de GCP Console con el usuario de Lender Finanzas
+
+cd /home/lenderfinanzas/cobros
 
 git pull origin master
 
 gcloud auth login
 
-
+# Crea la imagen Docker del código que está en el directorio y la sube al repositorio de imágenes de GCP.
 gcloud builds submit --tag gcr.io/daring-pier-461615-d0/cobros
 
 
+# Despliega la imagen anterior y utilizar el env.yaml para enviar los datos
 gcloud run deploy cobros \
   --image gcr.io/daring-pier-461615-d0/cobros \
   --platform managed \

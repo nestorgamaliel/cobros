@@ -281,3 +281,111 @@ class BaseDatos:
         self.session.close()
         logger.info("Sesion de base de datos cerrada")
         
+
+    def buscar_personas(self, filtros, limite=10, pagina=1):
+            """
+            Busca personas en la base de datos según los filtros.
+            
+            Args:
+                filtros (dict): Filtros de búsqueda
+                limite (int): Límite de resultados
+                pagina (int): Número de página
+                
+            Returns:
+                list: Lista de objetos Persona
+            """
+            try:
+                from app.models.models import Persona
+                from sqlalchemy import or_, and_
+                
+                session = self.get_session()
+                
+                # Construir query base
+                query = session.query(Persona)
+                
+                # Aplicar filtros
+                filtros_aplicados = []
+                
+                # Búsqueda exacta por DUI
+                if filtros.get('dui'):
+                    filtros_aplicados.append(Persona.dui == filtros['dui'])
+                
+                # Búsqueda parcial por nombres (case-insensitive)
+                if filtros.get('nombres'):
+                    filtros_aplicados.append(
+                        Persona.nombres.ilike(f"%{filtros['nombres']}%")
+                    )
+                
+                # Búsqueda parcial por apellidos (case-insensitive)
+                if filtros.get('apellidos'):
+                    filtros_aplicados.append(
+                        Persona.apellidos.ilike(f"%{filtros['apellidos']}%")
+                    )
+                
+                # Aplicar todos los filtros
+                if filtros_aplicados:
+                    query = query.filter(and_(*filtros_aplicados))
+                
+                # Ordenar resultados
+                query = query.order_by(Persona.nombres, Persona.apellidos)
+                
+                # Aplicar paginación
+                offset = (pagina - 1) * limite
+                personas = query.offset(offset).limit(limite).all()
+                
+                return personas
+                
+            except Exception as e:
+                logger.error(f"Error en búsqueda de personas: {str(e)}")
+                raise
+            finally:
+                session.close()
+
+
+    def contar_personas_filtradas(self, filtros):
+        """
+        Cuenta el total de personas que coinciden con los filtros.
+        
+        Args:
+            filtros (dict): Filtros de búsqueda
+            
+        Returns:
+            int: Número total de personas que coinciden
+        """
+        try:
+            from app.models.models import Persona
+            from sqlalchemy import and_
+            
+            session = self.get_session()
+            
+            # Construir query base
+            query = session.query(Persona)
+            
+            # Aplicar los mismos filtros que en buscar_personas
+            filtros_aplicados = []
+            
+            if filtros.get('dui'):
+                filtros_aplicados.append(Persona.dui == filtros['dui'])
+            
+            if filtros.get('nombres'):
+                filtros_aplicados.append(
+                    Persona.nombres.ilike(f"%{filtros['nombres']}%")
+                )
+            
+            if filtros.get('apellidos'):
+                filtros_aplicados.append(
+                    Persona.apellidos.ilike(f"%{filtros['apellidos']}%")
+                )
+            
+            # Aplicar filtros y contar
+            if filtros_aplicados:
+                query = query.filter(and_(*filtros_aplicados))
+            
+            total = query.count()
+            return total
+            
+        except Exception as e:
+            logger.error(f"Error al contar personas: {str(e)}")
+            raise
+        finally:
+            session.close()        

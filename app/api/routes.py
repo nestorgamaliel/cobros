@@ -37,6 +37,30 @@ def init_routes(servicio_pagos, servicio_personas, servicio_creditos):
     logger.info("Rutas de la API inicializadas")
     return api_blueprint
 
+def manejar_errores(f):
+    """Decorador para manejo centralizado de errores."""
+    from functools import wraps
+    
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except ValueError as e:
+            logger.warning(f"Error de validación en {f.__name__}: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': 'Datos inválidos',
+                'detalles': str(e)
+            }), 400
+        except Exception as e:
+            logger.error(f"Error interno en {f.__name__}: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': 'Error interno del servidor'
+            }), 500
+    return decorated_function
+
+
 
 @api_blueprint.route('/pago', methods=['POST'])
 def registrar_pago():
@@ -242,3 +266,98 @@ def crear_credito():
     except Exception as e:
         logger.error(f"Error en endpoint /credito: {str(e)}")
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
+    
+
+
+@api_blueprint.route('/personas/buscar', methods=['GET'])
+@manejar_errores
+def buscar_persona():
+    """
+    Endpoint para buscar personas por DUI, nombres o apellidos.
+    
+    Query Parameters:
+        - dui: string (opcional) - Buscar por DUI exacto
+        - nombres: string (opcional) - Buscar por nombres (búsqueda parcial)
+        - apellidos: string (opcional) - Buscar por apellidos (búsqueda parcial)
+        - limite: int (opcional, default=10) - Límite de resultados
+        - pagina: int (opcional, default=1) - Página de resultados
+    
+    Returns:
+        Response: JSON con los datos de las personas encontradas
+    """
+    # Obtener parámetros de búsqueda
+    dui = request.args.get('dui', '').strip()
+    nombres = request.args.get('nombres', '').strip()
+    apellidos = request.args.get('apellidos', '').strip()
+    
+    # Validar que se proporcione al menos un criterio de búsqueda
+    if not any([dui, nombres, apellidos]):
+        return jsonify({
+            'success': False,
+            'error': 'Debe proporcionar al menos uno de los siguientes parámetros: dui, nombres, apellidos'
+        }), 400
+    
+    # Parámetros de paginación
+    try:
+        limite = min(int(request.args.get('limite', 10)), 50)  # Máximo 50
+        pagina = max(int(request.args.get('pagina', 1)), 1)    # Mínimo 1
+    except (ValueError, TypeError):
+        return jsonify({
+            'success': False,
+            'error': 'Los parámetros limite y pagina deben ser números enteros'
+        }), 400
+    
+    logger.info(f"Buscando personas - DUI: {dui}, Nombres: {nombres}, Apellidos: {apellidos}")
+    
+    # Crear filtros para la búsqueda
+    filtros = {}
+    if dui:
+        filtros['dui'] = dui
+    if nombres:
+        filtros['nombres'] = nombres
+    if apellidos:
+        filtros['apellidos'] = apellidos
+    
+    # Buscar personas
+    resultado = persona_service.buscar_personas(filtros, limite, pagina)
+    
+    if not resultado['success']:
+        return jsonify({
+            'success': False,
+            'error': resultado['error']
+        }), 400
+    
+    # Formatear respuesta
+    personas_formateadas = []
+    for persona in resultado['personas']:
+        persona_dict = {
+            'persona_id': persona.persona_id,
+            'nombres': persona.nombres,
+            'apellidos': persona.apellidos,
+            'dui': persona.dui,
+            'telefono': persona.telefono,
+            'direccion': persona.direccion,
+            'fecha_nacimiento': persona.fecha_nacimiento.isoformat() if persona.fecha_nacimiento else None,
+            'sexo': persona.sexo
+        }
+        personas_formateadas.append(persona_dict)
+    
+    return jsonify({
+        'success': True,
+        'data': {
+            'personas': personas_formateadas,
+            'paginacion': {
+                'total': resultado['total'],
+                'pagina_actual': pagina,
+                'limite': limite,
+                'paginas_totales': resultado['paginas_totales'],
+                'tiene_siguiente': pagina < resultado['paginas_totales'],
+                'tiene_anterior': pagina > 1
+            }
+        },
+        'criterios_busqueda': {
+            'dui': dui or None,
+            'nombres': nombres or None,
+            'apellidos': apellidos or None
+        }
+    }), 200    

@@ -164,3 +164,47 @@ class ServicioPersonas:
         except Exception as e:
             logger.error(f"Error al eliminar persona: {str(e)}")
             return False, f"Error: {str(e)}"
+        
+    def buscar_personas(self, filtros, limite=10, pagina=1):
+            """
+            Busca personas según los filtros proporcionados.
+            
+            Args:
+                filtros (dict): Filtros de búsqueda (dui, nombres, apellidos)
+                limite (int): Límite de resultados por página
+                pagina (int): Número de página
+                
+            Returns:
+                dict: Diccionario con resultados de la búsqueda
+            """
+            try:
+                logger.info(f"Buscando personas con filtros: {filtros}")
+                
+                # Validar filtros
+                if not filtros or not any(filtros.values()):
+                    return {
+                        'success': False,
+                        'error': 'Debe proporcionar al menos un criterio de búsqueda'
+                    }
+                
+                # Obtener resultados del servicio de base de datos
+                personas = self.db.buscar_personas(filtros, limite, pagina)
+                total = self.db.contar_personas_filtradas(filtros)
+                
+                paginas_totales = (total + limite - 1) // limite if limite > 0 else 0
+                
+                logger.info(f"Encontradas {len(personas)} personas de un total de {total}")
+                
+                return {
+                    'success': True,
+                    'personas': personas,
+                    'total': total,
+                    'paginas_totales': paginas_totales
+                }
+                
+            except Exception as e:
+                logger.error(f"Error al buscar personas: {str(e)}")
+                return {
+                    'success': False,
+                    'error': f'Error en la búsqueda: {str(e)}'
+                }        
