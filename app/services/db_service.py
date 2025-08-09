@@ -294,6 +294,7 @@ class BaseDatos:
             Returns:
                 list: Lista de objetos Persona
             """
+            session = None
             try:
                 from app.models.models import Persona
                 from sqlalchemy import or_, and_
@@ -339,7 +340,8 @@ class BaseDatos:
                 logger.error(f"Error en búsqueda de personas: {str(e)}")
                 raise
             finally:
-                session.close()
+                if session:
+                    session.close()
 
 
     def contar_personas_filtradas(self, filtros):
@@ -352,6 +354,7 @@ class BaseDatos:
         Returns:
             int: Número total de personas que coinciden
         """
+        session = None
         try:
             from app.models.models import Persona
             from sqlalchemy import and_
@@ -388,4 +391,5 @@ class BaseDatos:
             logger.error(f"Error al contar personas: {str(e)}")
             raise
         finally:
-            session.close()        
+            if session:
+                session.close()
