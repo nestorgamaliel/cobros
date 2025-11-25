@@ -200,3 +200,57 @@ https://console.cloud.google.com/billing
 https://console.cloud.google.com/billing/reports
 
 
+
+
+#json
+#persona
+POS https://cobros-608132114325.us-central1.run.app/api/persona
+{
+    "nombres": "Yessica Liseth",
+    "apellidos": "Tejada Ramos",
+    "fecha_nacimiento": "1998-5-2",
+    "direccion": "15 pasaje, 15 de Septiembre calle albario Ciudad Arce",
+    "telefono":  68609872,
+    "sexo": "F",
+    "dui": "05710555-0"
+  }
+
+
+
+  #pago
+  POS https://cobros-608132114325.us-central1.run.app/api/pago
+  {
+  "credito_id": 49,
+  "fecha": "2025-08-26",
+  "monto": 100.00,
+  "multa": 0.00
+}
+
+
+#credito
+POST https://cobros-608132114325.us-central1.run.app/api/credito
+{
+  "// COMPLETE EXAMPLE - All fields": "",
+  "persona_id": 123,
+  "fecha": "2024-12-01",
+  "tasa_interes": 18.75,
+  "monto_solicitado": 10000.00,
+  "numero_cuotas": 24,
+  "comision_asistencia_financiera": 500.00,
+  "comision_administrativa": 300.00,
+  "monto_colocado": 9200.00,
+  "monto_intereses": 2250.00,
+  "total_credito_proyectado": 12750.00,
+  "cuota": 531.25,
+  "dia_pago": 30,
+  "cancelado": 0,
+  "privado": 2,
+  "observaciones": "Cliente preferencial - aprobacion rapida"
+}
+
+
+
+#buscar persona
+https://cobros-608132114325.us-central1.run.app/api/personas/buscar?dui=01487376-6
+
+
