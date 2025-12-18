@@ -222,7 +222,8 @@ POS https://cobros-608132114325.us-central1.run.app/api/persona
   "credito_id": 49,
   "fecha": "2025-08-26",
   "monto": 100.00,
-  "multa": 0.00
+  "multa": 0.00,
+  "intereses": 0.00
 }
 
 

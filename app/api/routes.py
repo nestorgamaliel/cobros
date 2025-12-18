@@ -78,11 +78,11 @@ def registrar_pago():
         monto = datos.get('monto')
         multa = datos.get('multa', 0)
         intereses = datos.get('intereses', 0)
-
         
-        if not credito_id or not monto:
-            return jsonify({'error': 'Faltan datos requeridos (credito_id, \
-                            monto)'}), 400
+        if not credito_id or (not monto and not intereses):
+            return jsonify({'error': 'Faltan datos requeridos (credito_id\
+                             es obligatorio y debe existir monto o intereses)'\
+                            }), 400        
         
         ruta_recibo, nombre_recibo, url_publica = pago_service.registrar_pago(credito_id,
                                                                  fecha, 
