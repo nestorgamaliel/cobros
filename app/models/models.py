@@ -67,6 +67,7 @@ class Pago(Base):
     fecha = Column(Date)
     monto = Column(Float)
     multa = Column(Float)
+    intereses = Column(Float)
     
     # Relacion con Credito
     credito = relationship("Credito", back_populates="pagos")

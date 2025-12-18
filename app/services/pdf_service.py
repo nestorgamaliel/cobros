@@ -185,9 +185,18 @@ class GeneradorRecibos:
             ["DETALLE DEL PAGO ACTUAL"],
             [f"Fecha de pago: {fecha_formateada}", f"Monto pagado: ${pago.monto:,.2f}"],
         ]
+
+        # Agregar fila de intereses, si aplica
+        if pago.intereses and pago.intereses > 0:
+            pago_info.append(["", f"Intereses: ${pago.intereses:,.2f}"])            
+
+
         # Agregar fila de multa, si aplica
         if pago.multa:
-            pago_info.append(["", f"Pago extemporaneo: ${pago.multa:,.2f}"])
+            # Determinamos el concepto basado en los intereses
+            concepto = "Mora" if (pago.intereses and pago.intereses > 0) else "Pago extemporaneo"
+            
+            pago_info.append(["", f"{concepto}: ${pago.multa:,.2f}"])            
 
         # Continuar con el resto de la información
         pago_info.append([f"Última fecha de pago: {ultima_fecha_pago}", f"Saldo pendiente: ${saldo:,.2f}"])

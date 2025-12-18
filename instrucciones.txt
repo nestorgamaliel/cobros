@@ -216,7 +216,6 @@ POS https://cobros-608132114325.us-central1.run.app/api/persona
   }
 
 
-
   #pago
   POS https://cobros-608132114325.us-central1.run.app/api/pago
   {
