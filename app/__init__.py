@@ -44,7 +44,7 @@ def create_app(test_config=None):
                           app.config.get('RECIBOS_DIR', config.RECIBOS_DIR))
     
     # Registrar blueprint de la API
-    app.register_blueprint(init_routes(pago_service, persona_service, credito_service),
+    app.register_blueprint(init_routes(pago_service, persona_service, credito_service, vendedor_service),
                            url_prefix='/api')
         
     # Ruta de inicio para verificar que la aplicacion está funcionando
