@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify, send_file
 from app.services import ServicioPagos
 from app.services import ServicioPersonas
 from app.services import ServicioCreditos
+from app.services import ServicioVendedores
 from app.utils.logger import setup_logger
 
 # Configurar logger
@@ -16,24 +17,28 @@ api_blueprint = Blueprint('api', __name__)
 pago_service = None
 persona_service = None
 credito_service = None
+vendedor_service = None
 
 
-def init_routes(servicio_pagos, servicio_personas, servicio_creditos):
+def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_vendedores):
     """
-    Inicializa las rutas con el servicio de pagos, personas, creditos.
+    Inicializa las rutas con el servicio de pagos, personas, creditos, vendedores.
     
     Args:
         servicio_pagos (ServicioPagos): Servicio de gestion de pagos.
         servicio_personas (ServicioPersonas): Servicio de gestion de personas.
         servicio_creditos (ServicioCreditos): Servicio de gestion de creditos.
+        servicio_vendedores (ServicioVendedores): Servicio de gestion de vendedores.
     """
     global pago_service
     global persona_service
     global credito_service
+    global vendedor_service
     # Asignar los servicios a las variables globales
     pago_service = servicio_pagos
     persona_service = servicio_personas
     credito_service = servicio_creditos
+    vendedor_service = servicio_vendedores
     logger.info("Rutas de la API inicializadas")
     return api_blueprint
 
@@ -192,7 +197,60 @@ def crear_persona():
         logger.error(f"Error en endpoint /persona: {str(e)}")
         return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500    
     
-    
+
+@api_blueprint.route('/vendedor', methods=['POST'])
+def crear_vendedor():
+    """
+    Endpoint para registrar un nuevo vendedor.
+   
+    Returns:
+        Response: Respuesta JSON con el resultado de la operación.
+    """
+    try:
+        datos = request.get_json()
+        
+        # Extraer datos del vendedor
+        vendedor_id = datos.get('vendedor_id')
+        nombre_vendedor = datos.get('nombre_vendedor')
+        
+        # Validar datos requeridos
+        if not vendedor_id:
+            return jsonify({
+                'error': 'Faltan datos requeridos (nombre_vendedor)'
+            }), 400
+        
+        # Validar datos requeridos
+        if not nombre_vendedor:
+            return jsonify({
+                'error': 'Faltan datos requeridos (nombre_vendedor)'
+            }), 400
+
+        # Llamar al servicio para crear la vendedor
+        resultado, error = vendedor_service.crear_vendedor(
+            vendedor_id=vendedor_id,
+            nombre_vendedor=nombre_vendedor
+        )
+        
+        # Comprobar resultado y devolver respuesta adecuada
+        if resultado:
+            # Convert SQLAlchemy object to dictionary for JSON serialization
+            return jsonify({
+                'mensaje': 'Vendedor registrado correctamente',
+                'vendedor_id': resultado.vendedor_id,
+                'datos': {
+                    'vendedor_id': resultado.vendedor_id,
+                    'nombre_vendedor': resultado.nombre_vendedor
+                }
+            }), 201
+        else:
+            # If error is a string, return it directly
+            return jsonify({'error': error}), 400
+    except Exception as e:
+        logger.error(f"Error en endpoint /vendedor: {str(e)}")
+        return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500    
+
+
+
 @api_blueprint.route('/credito', methods=['POST'])
 def crear_credito():
     """
@@ -220,8 +278,9 @@ def crear_credito():
         monto_intereses = datos.get('monto_intereses')
         privado = datos.get('privado')
         observaciones = datos.get('observaciones')  
+        vendedor_id = datos.get('vendedor_id')
                 
-        # Llamar al servicio para crear la persona
+        # Llamar al servicio para crear el credito
         resultado, error = credito_service.crear_credito(
             persona_id=persona_id,
             total_credito_proyectado=total_credito_proyectado,
@@ -237,7 +296,8 @@ def crear_credito():
             monto_colocado=monto_colocado,
             monto_intereses=monto_intereses,
             privado=privado,
-            observaciones=observaciones            
+            observaciones=observaciones,
+            vendedor_id=vendedor_id
         )
         
         # Comprobar resultado y devolver respuesta adecuada
@@ -261,7 +321,8 @@ def crear_credito():
                     'monto_colocado': resultado.monto_colocado,
                     'monto_intereses': resultado.monto_intereses,
                     'privado': resultado.privado,
-                    'observaciones': resultado.observaciones                               
+                    'observaciones': resultado.observaciones,
+                    'vendedor_id': resultado.vendedor_id
                 }
             }), 201
         else:

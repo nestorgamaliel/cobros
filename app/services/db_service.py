@@ -2,7 +2,7 @@
 import datetime
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from app.models import Base, Persona, Credito, Pago
+from app.models import Base, Persona, Credito, Pago, Vendedor
 from app.utils.logger import setup_logger
 
 # Configurar logger
@@ -115,6 +115,20 @@ class BaseDatos:
         """
         return self.session.query(Persona).filter_by(persona_id=persona_id).first()        
 
+    def obtener_vendedor(self, vendedor_id):
+        """
+        Obtiene un vendedor por su ID.
+        
+        Args:
+            vendedor_id (int): ID del vendedor a obtener.
+            
+        Returns:
+            vendedor: Objeto Vendedor encontrado o None si no existe.
+        """
+        return self.session.query(Vendedor).filter_by(vendedor_id=vendedor_id).first()        
+
+
+
     def obtener_datos_credito(self, credito_id):
         """
         Obtiene los datos completos del crédito incluyendo 
@@ -136,6 +150,7 @@ class BaseDatos:
                    a.dia_pago,
                    a.cuota,
                    c.ultima_fecha_pago,
+                   a.vendedor_id,
                    (a.total_credito_proyectado - COALESCE(c.pagado, 0)) AS saldo
             FROM credito a
             LEFT JOIN persona b ON (a.persona_id = b.persona_id)
@@ -164,6 +179,7 @@ class BaseDatos:
                 'dia_pago': result.dia_pago,
                 'cuota': result.cuota,
                 'ultima_fecha_pago': result.ultima_fecha_pago,
+                'vendedor_id': result.vendedor_id,
                 'saldo': result.saldo if result.saldo is not None else result.total_credito_proyectado
             }
             
@@ -219,6 +235,33 @@ class BaseDatos:
             logger.error(f"Error al insertar persona: {str(e)}")
             raise
         
+    def insertar_vendedor(self,
+                         vendedor_id,
+                         nombre_vendedor):
+        """
+        Inserta un nuevo vendedor en la base de datos.
+        
+        Args:
+            vendedor_id
+            nombre_vendedor):
+
+        Returns:
+            Vendedor: Objeto Vendedor insertado.
+        """
+        try:
+            nuevo_vendedor = Vendedor(vendedor_id=vendedor_id,
+                                    nombre_vendedor=nombre_vendedor)
+            self.session.add(nuevo_vendedor)
+            self.session.commit()    
+            logger.info(f"Vendedor insertado correctamente con ID:\
+                {nuevo_vendedor.vendedor_id}")
+            return nuevo_vendedor
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Error al insertar vendedor: {str(e)}")
+            raise
+
+
     def insertar_credito(self,
                          persona_id,
                          fecha,
@@ -234,14 +277,15 @@ class BaseDatos:
                          dia_pago,
                          cancelado,
                          privado,
-                         observaciones):
+                         observaciones,
+                         vendedor_id):
         """
         Inserta un nuevo credito en la base de datos.
         
         Args:
 
         Returns:
-            Pago: Objeto Pago insertado.
+            Credito: Objeto Credito insertado.
         """
         try:
             # Convertir la fecha si viene como string
@@ -264,7 +308,8 @@ class BaseDatos:
                                     dia_pago=dia_pago, 
                                     cancelado=cancelado, 
                                     privado=privado, 
-                                    observaciones=observaciones                                    
+                                    observaciones=observaciones,
+                                    vendedor_id=vendedor_id                                    
                                     )
             self.session.add(nuevo_credito)
             self.session.commit()    

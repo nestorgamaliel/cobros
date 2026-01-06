@@ -172,8 +172,6 @@ Este sistema está diseñado con una arquitectura modular para facilitar su exte
 - Añadir una interfaz web para administración
 
 
-
-
 # Para el despliegue, desde de GCP Console con el usuario de Lender Finanzas
 
 cd /home/lenderfinanzas/cobros
@@ -245,7 +243,8 @@ POST https://cobros-608132114325.us-central1.run.app/api/credito
   "dia_pago": 30,
   "cancelado": 0,
   "privado": 2,
-  "observaciones": "Cliente preferencial - aprobacion rapida"
+  "observaciones": "Cliente preferencial - aprobacion rapida",
+  "vendedor_id": 1
 }
 
 

@@ -34,7 +34,8 @@ class ServicioCreditos:
                             dia_pago, 
                             cancelado, 
                             privado, 
-                            observaciones):
+                            observaciones,
+                            vendedor_id):
         """
         Crea un nuevo credito en la base de datos.
         
@@ -70,7 +71,8 @@ class ServicioCreditos:
                 return None, "Cancelado debe ser 0 o 1"
             if privado and privado not in [0, 1, 2]:
                 return None, "Privado debe ser 0 o 1 o 2"
-                
+            if vendedor_id and vendedor_id <= 0:
+                return None, "Se espera un id de vendedor"                
             
             # Convertir fecha si viene como string
             if fecha and isinstance(fecha, str):
@@ -96,7 +98,8 @@ class ServicioCreditos:
                 dia_pago=dia_pago,
                 cancelado=cancelado,
                 privado=privado,
-                observaciones=observaciones                
+                observaciones=observaciones,
+                vendedor_id=vendedor_id
             )
             
             logger.info(f"Credito creado correctamente. ID:\

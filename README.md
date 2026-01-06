@@ -9,6 +9,7 @@ Sistema modular para gestionar pagos de créditos y generar recibos en formato P
 - Generación automática de recibos en PDF
 - API REST para integración con otros sistemas
 - Interfaz de línea de comandos (CLI)
+- Registro de vendedores de creditos
 
 ## Requisitos previos
 

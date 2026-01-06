@@ -1,7 +1,7 @@
 import os
 from flask import Flask
 from app.services import BaseDatos, GeneradorRecibos, ServicioPagos
-from app.services import ServicioPersonas, ServicioCreditos
+from app.services import ServicioPersonas, ServicioCreditos, ServicioVendedores
 from app.api import init_routes
 from app.utils.logger import setup_logger
 import config
@@ -15,6 +15,7 @@ pdf_service = None
 pago_service = None
 persona_service = None
 credito_service = None
+vendedor_service = None
 
 
 def create_app(test_config=None):
@@ -69,6 +70,7 @@ def inicializar_servicios(db_url, recibos_dir):
     global pago_service
     global persona_service
     global credito_service
+    global vendedor_service
     
     # Inicializar el servicio de base de datos
     db_service = BaseDatos(db_url)
@@ -80,6 +82,7 @@ def inicializar_servicios(db_url, recibos_dir):
     pago_service = ServicioPagos(db_service, pdf_service)
     persona_service = ServicioPersonas(db_service)
     credito_service = ServicioCreditos(db_service)    
+    vendedor_service = ServicioVendedores(db_service)
     
     logger.info("Servicios inicializados correctamente")
     
@@ -122,6 +125,17 @@ def get_persona_service():
         ServicioPersonas: Instancia del servicio de gestion de personas.
     """
     return persona_service
+
+def get_vendedor_service():
+    """
+    Obtiene el servicio de vendedores.
+    
+    Returns:
+        ServicioVendedores: Instancia del servicio de gestion de vendedores.
+    """
+    return vendedor_service
+
+
 
 
 def get_credito_service():
