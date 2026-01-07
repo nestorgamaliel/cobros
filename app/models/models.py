@@ -33,9 +33,6 @@ class Vendedor(Base):
     
     vendedor_id = Column(Integer, primary_key=True)
     nombre_vendedor = Column(String)
-
-    # Relacion con Credito
-    creditos = relationship("Credito", back_populates="vendedor")
     
     def __repr__(self):
         return f"<Vendedor(vendedor_id={self.vendedor_id}, nombre_vendedor='{self.nombre_vendedor}')>"
@@ -65,7 +62,6 @@ class Credito(Base):
     # Relaciones
     pagos = relationship("Pago", back_populates="credito")
     persona = relationship("Persona", back_populates="creditos")
-    vendedor = relationship("Vendedor", back_populates="creditos")
     
     def __repr__(self):
         return f"<Credito(credito_id={self.credito_id},\
