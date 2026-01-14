@@ -439,29 +439,28 @@ def buscar_persona():
             'apellidos': apellidos or None
         }
     }), 200    
+    
 
-
-    # --- NUEVO ENDPOINT PARA WHATSAPP ---
-    @api_blueprint.route('/cron/reporte-diario', methods=['POST'])
-    @manejar_errores
-    def ejecutar_reporte_diario():
-        """
-        Endpoint para ser llamado por GCP Cloud Scheduler.
-        Genera el reporte de cobros para hoy y mañana y lo envía por WhatsApp.
-        """
-        logger.info("Trigger de reporte diario recibido desde Scheduler")
-        
-        # Llamamos al método que creamos en ServicioCreditos
-        resultado = credito_service.enviar_reporte_diario_vencimientos()
-        
-        if resultado:
-            return jsonify({
-                'success': True,
-                'mensaje': 'Reporte enviado correctamente',
-                'destinatarios_notificados': len(resultado)
-            }), 200
-        else:
-            return jsonify({
-                'success': True,
-                'mensaje': 'No se enviaron mensajes (posiblemente no había cobros para hoy/mañana)'
-            }), 200
+@api_blueprint.route('/cron/reporte-diario', methods=['POST'])
+@manejar_errores
+def ejecutar_reporte_diario():
+    """
+    Endpoint para ser llamado por GCP Cloud Scheduler.
+    Genera el reporte de cobros para hoy y mañana y lo envía por WhatsApp.
+    """
+    logger.info("Trigger de reporte diario recibido desde Scheduler")
+    
+    # Llamamos al método que creamos en ServicioCreditos
+    resultado = credito_service.enviar_reporte_diario_vencimientos()
+    
+    if resultado:
+        return jsonify({
+            'success': True,
+            'mensaje': 'Reporte enviado correctamente',
+            'destinatarios_notificados': len(resultado)
+        }), 200
+    else:
+        return jsonify({
+            'success': True,
+            'mensaje': 'No se enviaron mensajes (posiblemente no había cobros para hoy/mañana)'
+        }), 200
