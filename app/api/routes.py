@@ -6,6 +6,8 @@ from app.services import ServicioPersonas
 from app.services import ServicioCreditos
 from app.services import ServicioVendedores
 from app.utils.logger import setup_logger
+from app.services.whatsapp_service import WhatsAppService, TwilioProvider
+
 
 # Configurar logger
 logger = setup_logger(__name__)
@@ -18,6 +20,7 @@ pago_service = None
 persona_service = None
 credito_service = None
 vendedor_service = None
+whatsapp_service = None
 
 
 def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_vendedores):
@@ -34,13 +37,23 @@ def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_v
     global persona_service
     global credito_service
     global vendedor_service
+    global whatsapp_service
+
     # Asignar los servicios a las variables globales
     pago_service = servicio_pagos
     persona_service = servicio_personas
     credito_service = servicio_creditos
-    vendedor_service = servicio_vendedores
+    vendedor_service = servicio_vendedores    
+    # Esto inyecta el proveedor de Twilio al servicio principal
+    whatsapp_service = WhatsAppService(TwilioProvider())
+
+    # Importante: Inyectamos el whatsapp_service al credito_service
+    # para que pueda enviar el reporte.
+    credito_service.whatsapp = whatsapp_service
+
     logger.info("Rutas de la API inicializadas")
     return api_blueprint
+
 
 def manejar_errores(f):
     """Decorador para manejo centralizado de errores."""
@@ -426,3 +439,29 @@ def buscar_persona():
             'apellidos': apellidos or None
         }
     }), 200    
+
+
+    # --- NUEVO ENDPOINT PARA WHATSAPP ---
+    @api_blueprint.route('/cron/reporte-diario', methods=['POST'])
+    @manejar_errores
+    def ejecutar_reporte_diario():
+        """
+        Endpoint para ser llamado por GCP Cloud Scheduler.
+        Genera el reporte de cobros para hoy y mañana y lo envía por WhatsApp.
+        """
+        logger.info("Trigger de reporte diario recibido desde Scheduler")
+        
+        # Llamamos al método que creamos en ServicioCreditos
+        resultado = credito_service.enviar_reporte_diario_vencimientos()
+        
+        if resultado:
+            return jsonify({
+                'success': True,
+                'mensaje': 'Reporte enviado correctamente',
+                'destinatarios_notificados': len(resultado)
+            }), 200
+        else:
+            return jsonify({
+                'success': True,
+                'mensaje': 'No se enviaron mensajes (posiblemente no había cobros para hoy/mañana)'
+            }), 200

@@ -6,3 +6,4 @@
 .env 
 ".env" 
 "recibos/*" 
+"env.yaml"

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import datetime
+import calendar
+from datetime import date, timedelta
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from app.models import Base, Persona, Credito, Pago, Vendedor
@@ -426,3 +428,51 @@ class BaseDatos:
         except Exception as e:
             logger.error(f"Error al contar personas: {str(e)}")
             raise
+
+
+def obtener_cobros_dia(self, dias_lista):
+        """
+        Ejecuta el query de fin de mes para Chalchuapa filtrando por días específicos.
+        
+        Args:
+            dias_lista (tuple): Ejemplo (13, 14)
+            
+        Returns:
+            list: Lista de diccionarios con la información de cobranza.
+        """
+        # Tu query SQL optimizado con parámetros :dias
+        sql = text("""
+            SELECT DISTINCT 
+               a.nombres || ' ' || a.apellidos AS cliente, 
+               a.cuota, 
+               a.dia_pago, 
+               a.nombre_vendedor AS vendedor, 
+               b.observacion 
+            FROM saldos_totales a
+               LEFT JOIN credito_gestion b ON (a.credito_id = b.credito_id)
+            WHERE ((a.dia_pago IN :dias) OR (EXTRACT(DAY FROM b.fecha_promesa) IN :dias))
+            AND a.privado = 2
+            ORDER BY a.dia_pago DESC
+        """)
+        
+        try:
+            # Ejecutamos pasando la tupla de días
+            result = self.session.execute(sql, {"dias": dias_lista}).fetchall()
+            
+            # Convertimos cada fila en un diccionario para que sea fácil de leer en el servicio
+            cobros = []
+            for row in result:
+                cobros.append({
+                    'cliente': row.cliente,
+                    'cuota': row.cuota,
+                    'dia_pago': row.dia_pago,
+                    'vendedor': row.vendedor,
+                    'observacion': row.observacion if row.observacion else "Sin obs."
+                })
+            
+            logger.info(f"Se obtuvieron {len(cobros)} registros para el reporte de WhatsApp")
+            return cobros
+            
+        except Exception as e:
+            logger.error(f"Error al obtener cobranza de Chalchuapa: {str(e)}")
+            return []
