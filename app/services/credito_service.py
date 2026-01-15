@@ -115,59 +115,59 @@ class ServicioCreditos:
             logger.error(f"Error al crear credito: {str(e)}")
             return None, f"Error: {str(e)}"
 
-def enviar_reporte_diario_vencimientos(self):
-        """
-        Lógica de negocio: Calcula los días a reportar y envía vía WhatsApp.
-        """
-        hoy = date.today()
-        manana = hoy + timedelta(days=1)
-        
-        # Iniciamos la lista de días con hoy y mañana
-        dias_a_consultar = {hoy.day, manana.day}
-        
-        # Lógica especial para fin de mes:
-        # Verificamos si hoy es el último día del mes
-        ultimo_dia_mes = calendar.monthrange(hoy.year, hoy.month)[1]
-        
-        if hoy.day == ultimo_dia_mes:
-            # Si hoy es el último (ej. 28 de feb o 30 de sept), 
-            # agregamos los días que no existen en este mes pero que los 
-            # clientes pueden tener como "día de pago" fijo.
-            dias_especiales = {28, 29, 30, 31}
-            dias_a_consultar.update(dias_especiales)
-            # También incluimos el día 1 (que ya debería estar en 'mañana', 
-            # pero lo aseguramos)
-            dias_a_consultar.add(1)
-
-        # Convertimos el set a tupla para el query SQL
-        dias_lista = tuple(dias_a_consultar)
-        
-        logger.info(f"Consultando cobros para los días del mes: {dias_lista}")
-        
-        # 1. Llamamos a tu método en db_service
-        datos = self.db.obtener_cobros_dia(dias_lista)
-        
-        # 2. Construcción del mensaje (Formato WhatsApp)
-        if not datos:
-            mensaje = f"No hay cobros pendientes para hoy ({hoy.day}) y mañana ({manana.day})."
-        else:
-            # Agregamos un título que explique el rango si es fin de mes
-            titulo = "Cobros del dia "
-            mensaje = f" *REPORTE DE COBRANZA ({titulo})*\n"
-            mensaje += f" Fecha: {hoy.strftime('%d/%m/%Y')}\n"
-            mensaje += "--------------------------------------------\n\n"
+    def enviar_reporte_diario_vencimientos(self):
+            """
+            Lógica de negocio: Calcula los días a reportar y envía vía WhatsApp.
+            """
+            hoy = date.today()
+            manana = hoy + timedelta(days=1)
             
-            for fila in datos:
-                obs = fila['observacion']
-                mensaje += (f" *{fila['cliente']}*\n"
-                            f" Cuota: ${fila['cuota']} | Día: {fila['dia_pago']}\n"
-                            f" Obs: {obs}\n"
-                            f"--------------------------------------------\n")
+            # Iniciamos la lista de días con hoy y mañana
+            dias_a_consultar = {hoy.day, manana.day}
+            
+            # Lógica especial para fin de mes:
+            # Verificamos si hoy es el último día del mes
+            ultimo_dia_mes = calendar.monthrange(hoy.year, hoy.month)[1]
+            
+            if hoy.day == ultimo_dia_mes:
+                # Si hoy es el último (ej. 28 de feb o 30 de sept), 
+                # agregamos los días que no existen en este mes pero que los 
+                # clientes pueden tener como "día de pago" fijo.
+                dias_especiales = {28, 29, 30, 31}
+                dias_a_consultar.update(dias_especiales)
+                # También incluimos el día 1 (que ya debería estar en 'mañana', 
+                # pero lo aseguramos)
+                dias_a_consultar.add(1)
 
-        # 3. Envío a los administradores
-        admins_env = os.getenv("WHATSAPP_ADMINS", "")
-        destinatarios = [n.strip() for n in admins_env.split(",") if n.strip()]
-        
-        if self.whatsapp and destinatarios:
-            return self.whatsapp.enviar_reporte_grupal(mensaje, destinatarios)
-        return None
+            # Convertimos el set a tupla para el query SQL
+            dias_lista = tuple(dias_a_consultar)
+            
+            logger.info(f"Consultando cobros para los días del mes: {dias_lista}")
+            
+            # 1. Llamamos a tu método en db_service
+            datos = self.db.obtener_cobros_dia(dias_lista)
+            
+            # 2. Construcción del mensaje (Formato WhatsApp)
+            if not datos:
+                mensaje = f"No hay cobros pendientes para hoy ({hoy.day}) y mañana ({manana.day})."
+            else:
+                # Agregamos un título que explique el rango si es fin de mes
+                titulo = "Cobros del dia "
+                mensaje = f" *REPORTE DE COBRANZA ({titulo})*\n"
+                mensaje += f" Fecha: {hoy.strftime('%d/%m/%Y')}\n"
+                mensaje += "--------------------------------------------\n\n"
+                
+                for fila in datos:
+                    obs = fila['observacion']
+                    mensaje += (f" *{fila['cliente']}*\n"
+                                f" Cuota: ${fila['cuota']} | Día: {fila['dia_pago']}\n"
+                                f" Obs: {obs}\n"
+                                f"--------------------------------------------\n")
+
+            # 3. Envío a los administradores
+            admins_env = os.getenv("WHATSAPP_ADMINS", "")
+            destinatarios = [n.strip() for n in admins_env.split(",") if n.strip()]
+            
+            if self.whatsapp and destinatarios:
+                return self.whatsapp.enviar_reporte_grupal(mensaje, destinatarios)
+            return None
