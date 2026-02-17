@@ -70,7 +70,7 @@ class ServicioPagos:
                                                           persona, datos_adicionales)
             # NUEVO: Guardar la URL en la base de datos
             if url_publica:
-                self.db.actualizar_url_pago(pago.pago_id, url_publica)
+                self.db.actualizar_url_pago(pago.pago_id, credito_id, url_publica)
 
             logger.info(f"Pago registrado correctamente. ID: {pago.pago_id}, \
                         Crédito: {credito_id}, Monto: {monto}")
@@ -78,5 +78,5 @@ class ServicioPagos:
             
         except Exception as e:
             logger.error(f"Error al registrar pago: {str(e)}")
-            return None, f"Error: {str(e)}"
+            return None, f"Error: {str(e)}", None
            

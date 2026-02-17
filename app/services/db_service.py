@@ -73,6 +73,11 @@ class BaseDatos:
                               multa=multa, intereses=intereses)
             self.session.add(nuevo_pago)
             self.session.commit()
+
+            # --- CRUCIAL ---
+            # Esto le dice a SQLAlchemy: "Ve a la base de datos y lee el pago_id que el Trigger creó"
+            self.session.refresh(nuevo_pago)
+
             logger.info(f"Pago insertado correctamente con ID:\
                 {nuevo_pago.pago_id}")
             return nuevo_pago
@@ -478,16 +483,24 @@ class BaseDatos:
             logger.error(f"Error al contar personas: {str(e)}")
             raise
         
-    def actualizar_url_pago(self, pago_id, url_publica):
-        """Actualiza la URL del recibo en un pago ya existente."""
+    def actualizar_url_pago(self, pago_id, credito_id, url_publica):
+        """Actualiza la URL usando la llave compuesta."""
         try:
-            pago = self.session.query(Pago).filter_by(pago_id=pago_id).first()
+            # Filtramos por los DOS campos de la llave primaria
+            pago = self.session.query(Pago).filter_by(
+                pago_id=pago_id, 
+                credito_id=credito_id
+            ).first()
+            
             if pago:
                 pago.url_recibo = url_publica
                 self.session.commit()
-                logger.info(f"URL guardada en BD para pago {pago_id}")
+                logger.info(f"URL guardada para pago {pago_id} del crédito {credito_id}")
                 return True
+            else:
+                logger.warning(f"No se encontró el pago con llave compuesta ({pago_id}, {credito_id})")
+                return False
         except Exception as e:
             self.session.rollback()
             logger.error(f"Error actualizando URL de pago: {str(e)}")
-            raise        
+            raise

@@ -75,7 +75,7 @@ class Pago(Base):
     __tablename__ = 'pago'
     
     pago_id = Column(Integer, primary_key=True)
-    credito_id = Column(Integer, ForeignKey('credito.credito_id'))
+    credito_id = Column(Integer, ForeignKey('credito.credito_id'), primary_key=True) # primary_key=True también aquí
     fecha = Column(Date)
     monto = Column(Float)
     multa = Column(Float)
