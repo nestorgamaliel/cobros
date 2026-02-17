@@ -68,23 +68,41 @@ class BaseDatos:
             # Convertir la fecha si viene como string
             if isinstance(fecha, str):
                 fecha = datetime.datetime.strptime(fecha, '%Y-%m-%d').date()
-                
-            nuevo_pago = Pago(credito_id=credito_id, fecha=fecha, monto=monto,
-                              multa=multa, intereses=intereses)
-            self.session.add(nuevo_pago)
+
+            # Usamos SQL explícito con RETURNING para capturar lo que el Trigger generó
+            sql = text("""
+                INSERT INTO pago (credito_id, fecha, monto, multa, intereses)
+                VALUES (:credito_id, :fecha, :monto, :multa, :intereses)
+                RETURNING pago_id
+            """)
+            
+            result = self.session.execute(sql, {
+                "credito_id": credito_id,
+                "fecha": fecha,
+                "monto": monto,
+                "multa": multa,
+                "intereses": intereses
+            })
+            
+            # Obtenemos el ID generado por el Trigger
+            nuevo_pago_id = result.fetchone()[0]
             self.session.commit()
-
-            # --- CRUCIAL ---
-            # Esto le dice a SQLAlchemy: "Ve a la base de datos y lee el pago_id que el Trigger creó"
-            self.session.refresh(nuevo_pago)
-
-            logger.info(f"Pago insertado correctamente con ID:\
-                {nuevo_pago.pago_id}")
-            return nuevo_pago
+            
+            # Ahora buscamos el objeto completo para devolverlo
+            return self.obtener_pago_compuesto(nuevo_pago_id, credito_id)
+            
         except Exception as e:
             self.session.rollback()
             logger.error(f"Error al insertar pago: {str(e)}")
-            raise
+            raise                    
+
+    def obtener_pago_compuesto(self, pago_id, credito_id):
+        """Auxiliar para obtener el pago por su llave compuesta"""
+        return self.session.query(Pago).filter_by(
+            pago_id=pago_id, 
+            credito_id=credito_id
+        ).first()
+
     
     def obtener_pago(self, pago_id):
         """
@@ -484,23 +502,17 @@ class BaseDatos:
             raise
         
     def actualizar_url_pago(self, pago_id, credito_id, url_publica):
-        """Actualiza la URL usando la llave compuesta."""
         try:
-            # Filtramos por los DOS campos de la llave primaria
-            pago = self.session.query(Pago).filter_by(
-                pago_id=pago_id, 
-                credito_id=credito_id
-            ).first()
+            # Importante: Filtrar por ambos campos de la PK
+            self.session.query(Pago).filter(
+                Pago.pago_id == pago_id,
+                Pago.credito_id == credito_id
+            ).update({"url_recibo": url_publica})
             
-            if pago:
-                pago.url_recibo = url_publica
-                self.session.commit()
-                logger.info(f"URL guardada para pago {pago_id} del crédito {credito_id}")
-                return True
-            else:
-                logger.warning(f"No se encontró el pago con llave compuesta ({pago_id}, {credito_id})")
-                return False
+            self.session.commit()
+            logger.info(f"URL de recibo guardada para pago {pago_id}")
+            return True
         except Exception as e:
             self.session.rollback()
-            logger.error(f"Error actualizando URL de pago: {str(e)}")
+            logger.error(f"Error al actualizar URL: {str(e)}")
             raise
