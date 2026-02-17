@@ -1,50 +1,105 @@
-sistema_cobros/
-│
-├── requirements.txt            # Dependencias del proyecto
-├── README.md                   # Documentación del proyecto
-├── config.py                   # Configuración global
-├── wsgi.py                     # Configuración global
-├── instrucciones.txt           # Configuración global
-├── estructura.txt              # Estructura
-├── env.yaml                    # Informacion para despliegue
-├── Dockerfile                  # 
-├── Ambiente.scr                # Ambiente
-├── app/                        # Paquete principal de la aplicación
-│   ├── __init__.py             # Inicialización de la aplicación
-│   ├── api/                    # Endpoints de la API
-│   │   ├── __init__.py
-│   │   └── routes.py           # Rutas de la API
-│   │   └── rutas_personas.py           # Rutas de la API
-│   │
-│   ├── models/                 # Modelos de datos
-│   │   ├── __init__.py
-│   │   └── models.py           # Definición de modelos SQLAlchemy
-│   │
-│   ├── services/               # Lógica de negocio
-│   │   ├── __init__.py
-│   │   ├── credito_service.py  # Servicio de gestion de creditos
-│   │   ├── db_service.py       # Servicio de gestión de base de datos
-│   │   └── pago_service.py     # Servicio de gestion de pago
-│   │   └── pdf_service.py      # Servicio para generar 
-│   │   └── persona_service.py  # Servicio de gestion de persona
-│   │
-│   └── utils/                  # Utilidades generales
-│       ├── __init__.py
-│       └── gcr_uploader.py     # Configuración de logging
-│       └── logger.py           # Configuración de logging
-│
-├── __pycache__/       
-│       ├── __init__.cpython.312.__pyc
-│       ├── __init__.cpython.313.__pyc
-├── source/						# Datos venv                
-│   ├── Lib/		            # Librerias
-│   ├── Scripts/	            # Librerias
-│   ├── Lib/		            # Librerias
-│   ├── Share/		            # Librerias
-├── venv/						# Ambiente
-├── .github/					# github
-├── .vscode/					# vscode
-├── recursos/					# imagenes
-│   ├── lender_logo.jpg         # Librerias
-└── recibos/                    # Directorio para almacenar los recibos generados
-```
+.
+├── Diagrama_Despliegue.png
+├── Dockerfile
+├── README.md
+├── __pycache__
+├── ambiente.scr
+├── app
+│   ├── __init__.py
+│   ├── __pycache__
+│   ├── api
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   ├── routes.py
+│   │   └── rutas_personas.py
+│   ├── models
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   └── models.py
+│   ├── services
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   ├── credito_service.py
+│   │   ├── db_service.py
+│   │   ├── pago_service.py
+│   │   ├── pdf_service.py
+│   │   ├── persona_service.py
+│   │   ├── vendedor_service.py
+│   │   └── whatsapp_service.py
+│   └── utils
+│       ├── __init__.py
+│       ├── __pycache__
+│       ├── gcs_uploader.py
+│       └── logger.py
+├── backup-dbå
+│   ├── dump-lender-202511242030.sql
+│   └── dump-lender-202511242031.sql
+├── config.py
+├── credito_gestion.erd
+├── env.yaml
+├── estructura.txt
+├── instrucciones.txt
+├── recibos
+├── recursos
+│   └── Lender_logo.jpg
+├── requirements.txt
+├── run.py
+├── source
+│   ├── Scripts
+│   │   ├── Activate.ps1
+│   │   ├── __pycache__
+│   │   ├── activate
+│   │   ├── activate.bat
+│   │   ├── deactivate.bat
+│   │   ├── pywin32_postinstall.py
+│   │   └── pywin32_testall.py
+│   ├── pyvenv.cfg
+│   └── share
+│       ├── jupyter
+│       │   └── kernels
+│       │       └── python3
+│       │           ├── kernel.json
+│       │           ├── logo-32x32.png
+│       │           ├── logo-64x64.png
+│       │           └── logo-svg.svg
+│       └── man
+│           └── man1
+│               └── ipython.1
+├── venv
+│   ├── Scripts
+│   │   ├── Activate.ps1
+│   │   ├── activate
+│   │   ├── activate.bat
+│   │   └── deactivate.bat
+│   ├── bin
+│   │   ├── Activate.ps1
+│   │   ├── activate
+│   │   ├── activate.csh
+│   │   ├── activate.fish
+│   │   ├── chardetect
+│   │   ├── dotenv
+│   │   ├── flask
+│   │   ├── gunicorn
+│   │   ├── normalizer
+│   │   ├── pip
+│   │   ├── pip3
+│   │   ├── pip3.13
+│   │   ├── pyrsa-decrypt
+│   │   ├── pyrsa-encrypt
+│   │   ├── pyrsa-keygen
+│   │   ├── pyrsa-priv2pub
+│   │   ├── pyrsa-sign
+│   │   ├── pyrsa-verify
+│   │   ├── python -> python3.13
+│   │   ├── python3 -> python3.13
+│   │   └── python3.13 -> /opt/homebrew/opt/python@3.13/bin/python3.13
+│   ├── include
+│   │   ├── python3.13
+│   │   └── site
+│   │       └── python3.13
+│   │           └── greenlet
+│   │               └── greenlet.h
+│   └── pyvenv.cfg
+└── wsgi.py
+
+32 directories, 71 files

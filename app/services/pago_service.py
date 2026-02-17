@@ -68,6 +68,10 @@ class ServicioPagos:
             ruta_recibo, nombre_recibo, url_publica  = \
                 self.generador_recibos.generar_recibo_pdf(pago, credito, 
                                                           persona, datos_adicionales)
+            # NUEVO: Guardar la URL en la base de datos
+            if url_publica:
+                self.db.actualizar_url_pago(pago.pago_id, url_publica)
+
             logger.info(f"Pago registrado correctamente. ID: {pago.pago_id}, \
                         Crédito: {credito_id}, Monto: {monto}")
             return ruta_recibo, nombre_recibo, url_publica

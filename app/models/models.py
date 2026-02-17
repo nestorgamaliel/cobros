@@ -80,6 +80,7 @@ class Pago(Base):
     monto = Column(Float)
     multa = Column(Float)
     intereses = Column(Float)
+    url_recibo = Column(String)
     
     # Relacion con Credito
     credito = relationship("Credito", back_populates="pagos")

@@ -478,3 +478,16 @@ class BaseDatos:
             logger.error(f"Error al contar personas: {str(e)}")
             raise
         
+    def actualizar_url_pago(self, pago_id, url_publica):
+        """Actualiza la URL del recibo en un pago ya existente."""
+        try:
+            pago = self.session.query(Pago).filter_by(pago_id=pago_id).first()
+            if pago:
+                pago.url_recibo = url_publica
+                self.session.commit()
+                logger.info(f"URL guardada en BD para pago {pago_id}")
+                return True
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Error actualizando URL de pago: {str(e)}")
+            raise        
