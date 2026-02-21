@@ -136,8 +136,8 @@ def obtener_recibo(nombre_recibo):
     """
     try:
         # Obtener la ruta del directorio de recibos desde la configuracion
-        from config import RECIBOS_DIR
-        ruta_recibo = os.path.join(RECIBOS_DIR, nombre_recibo)
+        from config import settings
+        ruta_recibo = os.path.join(settings.RECIBOS_DIR, nombre_recibo)
         
         if os.path.exists(ruta_recibo):
             return send_file(ruta_recibo, as_attachment=True)

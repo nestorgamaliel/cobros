@@ -12,7 +12,7 @@ import argparse
 import datetime
 from app import create_app, get_db_service, get_pago_service
 from app.utils.logger import setup_logger
-import config
+from config import settings
 
 
 # Configurar logger
@@ -41,9 +41,9 @@ def main():
     # Comando para iniciar el servidor web
     server_parser = subparsers.add_parser('servidor', 
                                           help='Iniciar el servidor web')
-    server_parser.add_argument('--host', type=str, default=config.APP_HOST, 
+    server_parser.add_argument('--host', type=str, default=settings.APP_HOST, 
                                help='Host del servidor')
-    server_parser.add_argument('--port', type=int, default=config.APP_PORT, 
+    server_parser.add_argument('--port', type=int, default=settings.APP_PORT, 
                                help='Puerto del servidor')
     
     # Comando para crear las tablas en la base de datos

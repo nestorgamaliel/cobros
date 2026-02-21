@@ -2,32 +2,33 @@
 import os
 from dotenv import load_dotenv
 
-# Cargar variables de entorno desde .env si existe
 load_dotenv()
 
-# Obtener variables individuales
-user = os.getenv('DB_USER')
-password = os.getenv('DB_PASSWORD')
-host = os.getenv('DB_HOST')
-port = os.getenv('DB_PORT')
-dbname = os.getenv('DB_NAME')
+class Config:
+    # Base de Datos
+    DB_USER = os.getenv('DB_USER')
+    DB_PASSWORD = os.getenv('DB_PASSWORD')
+    DB_HOST = os.getenv('DB_HOST')
+    DB_PORT = os.getenv('DB_PORT')
+    DB_NAME = os.getenv('DB_NAME')
+    
+    SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
-# Construir la URL de conexión
-DB_URL = f'postgresql://{user}:{password}@{host}:{port}/{dbname}'
+    # Configuración de la Aplicación
+    APP_HOST = os.getenv('APP_HOST', '127.0.0.1')
+    APP_PORT = int(os.getenv('APP_PORT', 5000))
 
-# Configuracion de la aplicacion
-APP_HOST = os.environ.get('APP_HOST', '127.0.0.1')
-APP_PORT = int(os.environ.get('APP_PORT', 5000))
+    # Configuración de Archivos y Rutas
+    RECIBOS_DIR = os.getenv('RECIBOS_DIR', 'recibos')
+    LOGO_PATH = os.path.join('recursos', 'Lender_logo.jpg')
 
-# Configuracion de rutas
-RECIBOS_DIR = os.environ.get('RECIBOS_DIR', 'recibos')
+    # Cloud Storage
+    GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "recibos-nestor-gcp")
+    GCS_PUBLIC_URL_BASE = os.getenv("GCS_PUBLIC_URL_BASE", "https://storage.googleapis.com/recibos-nestor-gcp")
 
-# Asegurar que el directorio de recibos exista
-os.makedirs(RECIBOS_DIR, exist_ok=True)
+    @staticmethod
+    def init_app(app):
+        os.makedirs(Config.RECIBOS_DIR, exist_ok=True)
 
-# Ruta al logo de la empresa
-LOGO_PATH = os.path.join('recursos', 'Lender_logo.jpg')
-
-# Nombre de tu bucket GCS (sin gs://)
-GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "recibos-nestor-gcp")
-GCS_PUBLIC_URL_BASE = os.getenv("GCS_PUBLIC_URL_BASE", "https://storage.googleapis.com/recibos-nestor-gcp")
+# Instancia para uso rápido
+settings = Config()

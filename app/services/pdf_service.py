@@ -10,7 +10,8 @@ from reportlab.lib.units import inch, cm
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from app.utils.logger import setup_logger
 from app.utils.gcs_uploader import subir_archivo_a_gcs
-import config
+from config import settings
+
 # Configurar logger
 logger = setup_logger(__name__)
 
@@ -30,15 +31,15 @@ class GeneradorRecibos:
                 Por defecto, usa el logo configurado en config.py.
         """
         if directorio_salida is None:
-            directorio_salida = config.RECIBOS_DIR
+            directorio_salida = settings.RECIBOS_DIR
             
         self.directorio_salida = directorio_salida
         if not os.path.exists(directorio_salida):
             os.makedirs(directorio_salida)
         
         # Configurar ruta del logo
-        self.logo_path = logo_path if logo_path else config.LOGO_PATH
-            
+        self.logo_path = logo_path if logo_path else settings.LOGO_PATH
+
         logger.info(f"Servicio de generacion de recibos inicializado \
                     (directorio: {directorio_salida})")
     
@@ -260,7 +261,7 @@ class GeneradorRecibos:
         
         # Dentro de tu método generar_recibo_pdf, justo antes del return:
         # bucket_name = config.GCS_BUCKET_NAME  # define esto en config.py
-        bucket_name = config.GCS_BUCKET_NAME
+        bucket_name = settings.GCS_BUCKET_NAME
         destino = f"recibos/{nombre_archivo}"
         url_publica = subir_archivo_a_gcs(ruta_archivo, destino, bucket_name)
 
