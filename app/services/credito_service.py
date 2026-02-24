@@ -72,8 +72,13 @@ class ServicioCreditos:
                 return None, "Cuota no puede ser negativa o cero"
             if dia_pago and dia_pago <= 0 or dia_pago > 31:
                 return None, "Día de pago no puede ser negativo o mayor a 31"
-            if cancelado and cancelado not in [0, 1]:
-                return None, "Cancelado debe ser 0 o 1"
+            if cancelado is not None:
+                if not isinstance(cancelado, bool):
+                    # Opcional: Intentar convertir si llega como 0, 1, "true", "false"
+                    if cancelado in [0, 1, "0", "1"]:
+                        cancelado = bool(int(cancelado))
+                    else:
+                        return None, "El campo 'cancelado' debe ser un valor booleano (True/False)"
             if privado and privado not in [0, 1, 2]:
                 return None, "Privado debe ser 0 o 1 o 2"
             if vendedor_id and vendedor_id <= 0:

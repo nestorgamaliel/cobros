@@ -54,8 +54,8 @@ class GeneradorRecibos:
             persona (Persona): Objeto Persona asociado al crédito.
             datos_adicionales (dict, opcional): Diccionario con datos 
             adicionales del estado del crédito.
-                Ej: {'ultima_fecha_pago': datetime, 'saldo': float, 'dia_pago'
-                : int, 'cuota': float}
+                Ej: {'ultima_fecha_pago': datetime, 'saldo': Numeric(10,2), 'dia_pago'
+                : int, 'cuota': Numeric(10,2)}
             
         Returns:
             tuple: (ruta_archivo, nombre_archivo) con las rutas del archivo 

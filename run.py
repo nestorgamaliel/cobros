@@ -35,7 +35,7 @@ def main():
                              help='ID del crédito')
     pago_parser.add_argument('--fecha', type=str, 
                              help='Fecha del pago (YYYY-MM-DD)')
-    pago_parser.add_argument('--monto', type=float, required=True, 
+    pago_parser.add_argument('--monto', type=Numeric(10,2), required=True, 
                              help='Monto del pago')
     
     # Comando para iniciar el servidor web

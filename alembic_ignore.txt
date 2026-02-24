@@ -1,0 +1,10 @@
+credito_contacto
+credito_gestion
+departamento
+documents_types
+municipio
+nivel_mora
+plan_pago
+prorroga
+resultado_envio
+tipo_envio

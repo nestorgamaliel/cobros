@@ -29,9 +29,9 @@ class ServicioPagos:
         Args:
             credito_id (int): ID del crédito al que corresponde el pago.
             fecha (str/date): Fecha del pago.
-            monto (float): Monto del pago.
-            multa (float): Monto de la multa, si aplica.
-            intereses (float): Intereses, si no paga capital
+            monto (Numeric(10,2)): Monto del pago.
+            multa (Numeric(10,2)): Monto de la multa, si aplica.
+            intereses (Numeric(10,2)): Intereses, si no paga capital
             
         Returns:
             tuple: (ruta_recibo, nombre_recibo) con las rutas del recibo 

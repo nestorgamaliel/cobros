@@ -57,9 +57,9 @@ class BaseDatos:
         Args:
             credito_id (int): ID del crédito al que corresponde el pago.
             fecha (str/date): Fecha del pago.
-            monto (float): Monto del pago.
-            multa (float): Pago adicional por extemporalidad.
-            intereses (float): Monto de intereses, cuando no paga a "capital"
+            monto (Numeric(10,2)): Monto del pago.
+            multa (Numeric(10,2)): Pago adicional por extemporalidad.
+            intereses (Numeric(10,2)): Monto de intereses, cuando no paga a "capital"
             
         Returns:
             Pago: Objeto Pago insertado.

@@ -1,17 +1,35 @@
 # -*- coding: utf-8 -*-
 import os
-from dotenv import load_dotenv
+import yaml
+from pathlib import Path
 
-load_dotenv()
+# 1. Localizar y cargar el archivo env.yaml
+BASE_DIR = Path(__file__).resolve().parent
+yaml_path = BASE_DIR / 'env.yaml'
+
+if yaml_path.exists():
+    with open(yaml_path, 'r') as f:
+        config_data = yaml.safe_load(f)
+        if config_data:
+            # Inyectamos los valores al entorno para que os.getenv los reconozca
+            for key, value in config_data.items():
+                os.environ[key] = str(value)
+else:
+    # Opcional: imprimir una advertencia si el archivo no existe
+    print(f"Advertencia: No se encontró el archivo {yaml_path}")
 
 class Config:
     # Base de Datos
     DB_USER = os.getenv('DB_USER')
     DB_PASSWORD = os.getenv('DB_PASSWORD')
     DB_HOST = os.getenv('DB_HOST')
-    DB_PORT = os.getenv('DB_PORT')
+    
+    # Si os.getenv devuelve None, usamos '5432' como puerto por defecto
+    DB_PORT = os.getenv('DB_PORT') or '5432'
+    
     DB_NAME = os.getenv('DB_NAME')
     
+    # Construcción de la URL de SQLAlchemy
     SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
     # Configuración de la Aplicación
@@ -30,5 +48,5 @@ class Config:
     def init_app(app):
         os.makedirs(Config.RECIBOS_DIR, exist_ok=True)
 
-# Instancia para uso rápido
+# Instancia para uso rápido en el resto de la app
 settings = Config()
