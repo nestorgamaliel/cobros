@@ -1,9 +1,13 @@
-"venv/" 
-"__pychache__/" 
-"*.pyc" 
-"*.db" 
-"recibos/" 
-.env 
-".env" 
-"recibos/*" 
-"env.yaml"
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Alembic temporales
+migrations/versions/__pycache__/
+
+# Sistema
+.DS_Store
+*.sql
+backup-db/
