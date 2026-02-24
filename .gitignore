@@ -1,13 +1,25 @@
-# Python
+# Entornos virtuales
+venv/
+env/
+
+# Caché de Python (corregido sin la 'h' extra)
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Alembic temporales
-migrations/versions/__pycache__/
-
-# Sistema
+# Archivos de sistema
 .DS_Store
-*.sql
+Thumbs.db
+
+# Configuración sensible
+.env
+env.yaml
+
+# Datos y Backups (Esto quitará la carpeta que mencionas)
 backup-db/
+*.sql
+*.db
+
+# Archivos generados por la app
+recibos/
