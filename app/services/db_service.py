@@ -117,3 +117,54 @@ class BaseDatos:
 
     def cerrar(self):
         self.session.close()
+
+
+    def buscar_personas(self, filtros, limite=10, pagina=1):
+        """
+        Busca personas en la base de datos según los filtros (DUI, nombres, apellidos).
+        """
+        try:
+            from sqlalchemy import and_
+            query = self.session.query(Persona)
+            
+            filtros_aplicados = []
+            if filtros.get('dui'):
+                filtros_aplicados.append(Persona.dui == filtros['dui'])
+            if filtros.get('nombres'):
+                filtros_aplicados.append(Persona.nombres.ilike(f"%{filtros['nombres']}%"))
+            if filtros.get('apellidos'):
+                filtros_aplicados.append(Persona.apellidos.ilike(f"%{filtros['apellidos']}%"))
+            
+            if filtros_aplicados:
+                query = query.filter(and_(*filtros_aplicados))
+            
+            offset = (pagina - 1) * limite
+            return query.order_by(Persona.nombres).offset(offset).limit(limite).all()
+        except Exception as e:
+            logger.error(f"Error en buscar_personas: {str(e)}")
+            raise
+        
+
+    def contar_personas_filtradas(self, filtros):
+        """
+        Cuenta el total de personas para la paginación.
+        """
+        try:
+            from sqlalchemy import and_
+            query = self.session.query(Persona)
+            
+            filtros_aplicados = []
+            if filtros.get('dui'):
+                filtros_aplicados.append(Persona.dui == filtros['dui'])
+            if filtros.get('nombres'):
+                filtros_aplicados.append(Persona.nombres.ilike(f"%{filtros['nombres']}%"))
+            if filtros.get('apellidos'):
+                filtros_aplicados.append(Persona.apellidos.ilike(f"%{filtros['apellidos']}%"))
+            
+            if filtros_aplicados:
+                query = query.filter(and_(*filtros_aplicados))
+            
+            return query.count()
+        except Exception as e:
+            logger.error(f"Error en contar_personas_filtradas: {str(e)}")
+            raise        
