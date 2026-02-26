@@ -62,7 +62,32 @@ def buscar_persona():
     pagina = int(request.args.get('pagina', 1))
 
     resultado = persona_service.buscar_personas(filtros, limite, pagina)
+    
+    if not resultado.get('success'):
+        return jsonify(resultado), 400
+    
+    # --- AQUÍ ESTÁ EL CAMBIO ---
+    # Convertimos los objetos Persona a diccionarios serializables
+    personas_serializables = []
+    for p in resultado['personas']:
+        personas_serializables.append({
+            'persona_id': p.persona_id,
+            'nombres': p.nombres,
+            'apellidos': p.apellidos,
+            'dui': p.dui,
+            'telefono': p.telefono,
+            'direccion': p.direccion,
+            # Formateamos la fecha a string para que JSON no falle
+            'fecha_nacimiento': p.fecha_nacimiento.strftime('%Y-%m-%d') if p.fecha_nacimiento else None
+        })
+    
+    # Reemplazamos la lista de objetos por la lista de diccionarios
+    resultado['personas'] = personas_serializables
+    
     return jsonify(resultado), 200
+
+
+
 
 # --- RUTAS DE CRÉDITOS ---
 
