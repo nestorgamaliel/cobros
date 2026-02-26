@@ -8,7 +8,7 @@ from app.utils.logger import setup_logger
 logger = setup_logger(__name__)
 
 class BaseDatos:
-    """Servicio genérico para interactuar con la base de datos."""
+    """Servicio unificado para interactuar con la base de datos."""
     
     def __init__(self, db_url):
         self.engine = create_engine(db_url, pool_pre_ping=True)
@@ -24,10 +24,11 @@ class BaseDatos:
             logger.error(f"Error de conexión: {str(e)}")
             return False
 
-    # --- MÉTODOS GENÉRICOS DE INSERCIÓN ---
+    # ==========================================================
+    # 1. MÉTODOS GENÉRICOS (CRUD BÁSICO)
+    # ==========================================================
     
     def _insertar_generico(self, modelo, **kwargs):
-        """Método privado para reutilizar lógica de inserción."""
         try:
             nuevo_objeto = modelo(**kwargs)
             self.session.add(nuevo_objeto)
@@ -38,53 +39,6 @@ class BaseDatos:
             self.session.rollback()
             logger.error(f"Error al insertar en {modelo.__tablename__}: {str(e)}")
             raise
-
-    def insertar_persona(self, **kwargs):
-        return self._insertar_generico(Persona, **kwargs)
-
-    def insertar_vendedor(self, **kwargs):
-        return self._insertar_generico(Vendedor, **kwargs)
-
-    def insertar_credito(self, **kwargs):
-        return self._insertar_generico(Credito, **kwargs)
-
-    def insertar_pago(self, **kwargs):
-        """
-        Mantenemos la lógica especial para pagos por el uso de RETURNING 
-        y la sincronización con el Trigger de PostgreSQL.
-        """
-        try:
-            sql = text("""
-                INSERT INTO pago (credito_id, fecha, monto, multa, intereses)
-                VALUES (:credito_id, :fecha, :monto, :multa, :intereses)
-                RETURNING pago_id
-            """)
-            result = self.session.execute(sql, kwargs)
-            nuevo_pago_id = result.fetchone()[0]
-            self.session.commit()
-            return self.obtener_pago_compuesto(nuevo_pago_id, kwargs.get('credito_id'))
-        except Exception as e:
-            self.session.rollback()
-            raise
-
-    # --- MÉTODOS GENÉRICOS DE OBTENCIÓN ---
-
-    def obtener_persona(self, id):
-        return self.session.query(Persona).get(id)
-
-    def obtener_credito(self, id):
-        return self.session.query(Credito).get(id)
-
-    def obtener_vendedor(self, id):
-        return self.session.query(Vendedor).get(id)
-
-    def obtener_pago(self, id):
-        return self.session.query(Pago).filter_by(pago_id=id).first()
-
-    def obtener_pago_compuesto(self, pago_id, credito_id):
-        return self.session.query(Pago).filter_by(pago_id=pago_id, credito_id=credito_id).first()
-
-    # --- MÉTODOS GENÉRICOS DE ACTUALIZACIÓN ---
 
     def _actualizar_generico(self, modelo, id_attr, id_val, **kwargs):
         try:
@@ -99,34 +53,105 @@ class BaseDatos:
             self.session.rollback()
             raise
 
+    # Inserciones
+    def insertar_persona(self, **kwargs): return self._insertar_generico(Persona, **kwargs)
+    def insertar_vendedor(self, **kwargs): return self._insertar_generico(Vendedor, **kwargs)
+    def insertar_credito(self, **kwargs): return self._insertar_generico(Credito, **kwargs)
+    def insertar_comision(self, **kwargs): return self._insertar_generico(CreditoComision, **kwargs)
+
+    # Actualizaciones
     def actualizar_persona(self, persona_id, **kwargs):
         return self._actualizar_generico(Persona, 'persona_id', persona_id, **kwargs)
-
+    
     def actualizar_credito(self, credito_id, **kwargs):
         return self._actualizar_generico(Credito, 'credito_id', credito_id, **kwargs)
 
-    # --- QUERIES COMPLEJOS (Se mantienen igual) ---
+    # Obtenciones simples
+    def obtener_persona(self, id): return self.session.query(Persona).get(id)
+    def obtener_credito(self, id): return self.session.query(Credito).get(id)
+    def obtener_vendedor(self, id): return self.session.query(Vendedor).get(id)
+    def obtener_pago(self, id): return self.session.query(Pago).filter_by(pago_id=id).first()
+
+    # ==========================================================
+    # 2. MÉTODOS ESPECIALES (LÓGICA COMPLEJA / SQL)
+    # ==========================================================
+
+    def insertar_pago(self, **kwargs):
+        """Usa RETURNING para capturar el ID generado por el Trigger de la DB."""
+        try:
+            sql = text("""
+                INSERT INTO pago (credito_id, fecha, monto, multa, intereses, monto_comision)
+                VALUES (:credito_id, :fecha, :monto, :multa, :intereses, :monto_comision)
+                RETURNING pago_id
+            """)
+            result = self.session.execute(sql, kwargs)
+            nuevo_pago_id = result.fetchone()[0]
+            self.session.commit()
+            return self.obtener_pago_compuesto(nuevo_pago_id, kwargs.get('credito_id'))
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Error al insertar pago: {str(e)}")
+            raise
+
+    def obtener_pago_compuesto(self, pago_id, credito_id):
+        return self.session.query(Pago).filter_by(pago_id=pago_id, credito_id=credito_id).first()
+
+    def actualizar_url_pago(self, pago_id, credito_id, url_publica):
+        try:
+            self.session.query(Pago).filter(
+                Pago.pago_id == pago_id,
+                Pago.credito_id == credito_id
+            ).update({"url_recibo": url_publica})
+            self.session.commit()
+            return True
+        except Exception as e:
+            self.session.rollback()
+            raise
 
     def obtener_datos_credito(self, credito_id):
-        # ... (Tu query SQL de saldos proyectados se queda igual)
-        pass
+        sql = text("""
+            SELECT a.credito_id,
+                   b.nombres || ' ' || b.apellidos AS cliente,
+                   a.fecha AS fecha_credito,
+                   a.total_credito_proyectado,
+                   a.dia_pago,
+                   a.cuota,
+                   c.ultima_fecha_pago,
+                   a.vendedor_id,
+                   (a.total_credito_proyectado - COALESCE(c.pagado, 0)) AS saldo
+            FROM credito a
+            LEFT JOIN persona b ON (a.persona_id = b.persona_id)
+            LEFT JOIN (
+                SELECT credito_id,
+                       SUM(monto) AS pagado,
+                       MAX(fecha) AS ultima_fecha_pago
+                FROM pago
+                GROUP BY credito_id
+            ) c ON (a.credito_id = c.credito_id)
+            WHERE a.credito_id = :credito_id
+        """)
+        try:
+            result = self.session.execute(sql, {"credito_id": credito_id}).fetchone()
+            if not result: return {}
+            return {
+                'credito_id': result.credito_id,
+                'cliente': result.cliente,
+                'fecha_credito': result.fecha_credito,
+                'total_credito_proyectado': result.total_credito_proyectado,
+                'dia_pago': result.dia_pago,
+                'cuota': result.cuota,
+                'ultima_fecha_pago': result.ultima_fecha_pago,
+                'vendedor_id': result.vendedor_id,
+                'saldo': result.saldo if result.saldo is not None else result.total_credito_proyectado
+            }
+        except Exception as e:
+            logger.error(f"Error en obtener_datos_credito: {str(e)}")
+            raise
 
     def buscar_personas(self, filtros, limite=10, pagina=1):
-        # ... (Tu lógica de filtros ilike se queda igual)
-        pass
-
-    def cerrar(self):
-        self.session.close()
-
-
-    def buscar_personas(self, filtros, limite=10, pagina=1):
-        """
-        Busca personas en la base de datos según los filtros (DUI, nombres, apellidos).
-        """
         try:
             from sqlalchemy import and_
             query = self.session.query(Persona)
-            
             filtros_aplicados = []
             if filtros.get('dui'):
                 filtros_aplicados.append(Persona.dui == filtros['dui'])
@@ -143,16 +168,11 @@ class BaseDatos:
         except Exception as e:
             logger.error(f"Error en buscar_personas: {str(e)}")
             raise
-        
 
     def contar_personas_filtradas(self, filtros):
-        """
-        Cuenta el total de personas para la paginación.
-        """
         try:
             from sqlalchemy import and_
             query = self.session.query(Persona)
-            
             filtros_aplicados = []
             if filtros.get('dui'):
                 filtros_aplicados.append(Persona.dui == filtros['dui'])
@@ -160,11 +180,36 @@ class BaseDatos:
                 filtros_aplicados.append(Persona.nombres.ilike(f"%{filtros['nombres']}%"))
             if filtros.get('apellidos'):
                 filtros_aplicados.append(Persona.apellidos.ilike(f"%{filtros['apellidos']}%"))
-            
             if filtros_aplicados:
                 query = query.filter(and_(*filtros_aplicados))
-            
             return query.count()
         except Exception as e:
             logger.error(f"Error en contar_personas_filtradas: {str(e)}")
-            raise        
+            raise
+
+    def obtener_cobros_dia(self, dias_lista):
+        sql = text("""
+            SELECT DISTINCT 
+            a.nombres || ' ' || a.apellidos AS cliente, 
+            a.cuota, 
+            a.dia_pago, 
+            a.nombre_vendedor AS vendedor, 
+            b.observacion 
+            FROM saldos_totales a
+            LEFT JOIN credito_gestion b ON (a.credito_id = b.credito_id)
+            WHERE ((a.dia_pago IN :dias) OR (EXTRACT(DAY FROM b.fecha_promesa) IN :dias))
+            AND a.privado = 2
+            ORDER BY a.dia_pago DESC
+        """)
+        try:
+            result = self.session.execute(sql, {"dias": dias_lista}).fetchall()
+            return [{
+                'cliente': r.cliente, 'cuota': r.cuota, 'dia_pago': r.dia_pago,
+                'vendedor': r.vendedor, 'observacion': r.observacion or "Sin obs."
+            } for r in result]
+        except Exception as e:
+            logger.error(f"Error en reporte de cobros: {str(e)}")
+            return []
+
+    def cerrar(self):
+        self.session.close()

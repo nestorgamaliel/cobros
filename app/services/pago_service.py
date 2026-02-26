@@ -1,62 +1,37 @@
+# -*- coding: utf-8 -*-
 from app.services.db_service import BaseDatos
 from app.services.pdf_service import GeneradorRecibos
+from app.schemas.pago import PagoCreate
 from app.utils.logger import setup_logger
-from sqlalchemy import text
 
-# Configurar logger
 logger = setup_logger(__name__)
-
 
 class ServicioPagos:
     """Servicio para gestionar pagos y generar recibos."""
     
-    def __init__(self, db_service, pdf_service):
-        """
-        Inicializa el servicio de pagos.
-        
-        Args:
-            db_service (BaseDatos): Servicio de base de datos.
-            pdf_service (GeneradorRecibos): Servicio de generacion de recibos.
-        """
+    def __init__(self, db_service: BaseDatos, pdf_service: GeneradorRecibos):
         self.db = db_service
         self.generador_recibos = pdf_service
-        logger.info("Servicio de pagos inicializado")
+        logger.info("Servicio de pagos inicializado con DTOs")
         
-    def registrar_pago(self, credito_id, fecha, monto, multa, intereses):
+    def registrar_pago(self, datos: PagoCreate):
         """
-        Registra un nuevo pago y genera el recibo correspondiente.
-        
-        Args:
-            credito_id (int): ID del crédito al que corresponde el pago.
-            fecha (str/date): Fecha del pago.
-            monto (Numeric(10,2)): Monto del pago.
-            multa (Numeric(10,2)): Monto de la multa, si aplica.
-            intereses (Numeric(10,2)): Intereses, si no paga capital
-            
-        Returns:
-            tuple: (ruta_recibo, nombre_recibo) con las rutas del recibo 
-            generado,
-                   o (None, mensaje_error) en caso de error.
+        Registra un pago, genera el PDF y actualiza la URL pública.
         """
         try:
-            # Insertar el pago en la base de datos
-            pago = self.db.insertar_pago(credito_id, fecha, monto, multa, intereses)
+            # 1. Insertar el pago usando la magia de los asteriscos
+            # Pasamos los datos validados del DTO directamente a db_service
+            pago = self.db.insertar_pago(**datos.model_dump())
             
-            # Obtener informacion relacionada
-            credito = self.db.obtener_credito(credito_id)
+            # 2. Obtener información para el recibo
+            credito = self.db.obtener_credito(datos.credito_id)
             if not credito:
-                logger.error(f"No se encontro el crédito con ID: {credito_id}")
-                return None, "Error: Crédito no encontrado"
+                return None, "Error: Crédito no encontrado", None
             
-            persona = self.db.obtener_persona(credito.persona_id)                        
-            if not persona:
-                logger.error(f"No se encontro el persona con ID: {credito.persona_id}")
-                return None, "Error: persona no encontrado"
-                        
-            # Obtener datos adicionales del crédito
+            persona = self.db.obtener_persona(credito.persona_id)
             datos_credito = self.db.obtener_datos_credito(credito.credito_id)
             
-            # Preparar los datos adicionales para el recibo
+            # 3. Preparar datos adicionales para el PDF
             datos_adicionales = {
                 'ultima_fecha_pago': datos_credito.get('ultima_fecha_pago'),
                 'saldo': datos_credito.get('saldo', 0),
@@ -64,19 +39,18 @@ class ServicioPagos:
                 'cuota': datos_credito.get('cuota', 0),
             }                        
             
-            # Generar el recibo de pago
-            ruta_recibo, nombre_recibo, url_publica  = \
-                self.generador_recibos.generar_recibo_pdf(pago, credito, 
-                                                          persona, datos_adicionales)
-            # NUEVO: Guardar la URL en la base de datos
-            if url_publica:
-                self.db.actualizar_url_pago(pago.pago_id, credito_id, url_publica)
+            # 4. Generar y subir PDF (El pdf_service ya sube a GCS)
+            ruta_local, nombre_archivo, url_publica = self.generador_recibos.generar_recibo_pdf(
+                pago, credito, persona, datos_adicionales
+            )
 
-            logger.info(f"Pago registrado correctamente. ID: {pago.pago_id}, \
-                        Crédito: {credito_id}, Monto: {monto}")
-            return ruta_recibo, nombre_recibo, url_publica
+            # 5. Guardar la URL en la BD para futuras consultas
+            if url_publica:
+                self.db.actualizar_url_pago(pago.pago_id, datos.credito_id, url_publica)
+
+            logger.info(f"Pago {pago.pago_id} procesado exitosamente")
+            return ruta_local, nombre_archivo, url_publica
             
         except Exception as e:
-            logger.error(f"Error al registrar pago: {str(e)}")
+            logger.error(f"Error crítico al registrar pago: {str(e)}")
             return None, f"Error: {str(e)}", None
-           

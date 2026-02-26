@@ -19,24 +19,24 @@ credito_service = None
 vendedor_service = None
 
 def create_app(test_config=None):
-    """Crea y configura la aplicacion Flask."""
     app = Flask(__name__, instance_relative_config=True)
     
-    # 1. Cargar configuración desde el objeto profesional
+    # 1. Cargar configuración
     if test_config is None:
-        # Cargamos directamente desde nuestra clase Config
         app.config.from_object(settings)
     else:
         app.config.from_mapping(test_config)
     
-    # 2. Ejecutar inicialización de carpetas (como RECIBOS_DIR)
+    # 2. Inicializar carpetas (GCS, Recibos, etc.)
     settings.init_app(app)
     
-    # 3. Inicializar servicios usando settings
-    # Ya no pasamos parámetros manuales, la función los toma de settings
+    # 3. PRIMERO inicializamos los servicios
+    # Esto llena las variables globales db_service, pago_service, etc.
     inicializar_servicios()
     
-    # Registrar blueprint de la API
+    # 4. DESPUÉS registramos el blueprint pasando los servicios ya creados
+    from app.api.router import init_routes # Import local para evitar ciclos
+    
     app.register_blueprint(
         init_routes(pago_service, persona_service, credito_service, vendedor_service),
         url_prefix='/api'
@@ -46,10 +46,11 @@ def create_app(test_config=None):
     def index():
         return {
             'status': 'ok', 
-            'message': 'Sistema de Gestion de Cobros Crediticios funcionando correctamente'
+            'version': '2.0 (DTO Enabled)',
+            'message': 'Sistema de Gestión de Cobros funcionando'
         }
     
-    logger.info("Aplicacion Flask inicializada correctamente")
+    logger.info("Aplicación Flask y Rutas DTO inicializadas")
     return app
 
 def inicializar_servicios():
