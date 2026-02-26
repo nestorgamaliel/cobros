@@ -35,7 +35,7 @@ def create_app(test_config=None):
     inicializar_servicios()
     
     # 4. DESPUÉS registramos el blueprint pasando los servicios ya creados
-    from app.api.router import init_routes # Import local para evitar ciclos
+    from app.api import init_routes
     
     app.register_blueprint(
         init_routes(pago_service, persona_service, credito_service, vendedor_service),
