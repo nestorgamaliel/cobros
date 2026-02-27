@@ -1,25 +1,37 @@
 # Entornos virtuales
 venv/
 env/
+.venv/
 
-# Caché de Python (corregido sin la 'h' extra)
+# Caché de Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
 
 # Archivos de sistema
 .DS_Store
 Thumbs.db
 
-# Configuración sensible
+# Configuración sensible (¡SÍ, EL .env YA ESTÁ AQUÍ!)
 .env
+.env.*
+! .env.example
 env.yaml
 
-# Datos y Backups (Esto quitará la carpeta que mencionas)
+# Datos y Backups
 backup-db/
 *.sql
 *.db
+*.sqlite
 
 # Archivos generados por la app
 recibos/
+logs/
+*.log
+
+# Distribución / Construcción
+build/
+dist/
+*.egg-info/
