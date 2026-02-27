@@ -57,3 +57,14 @@ class Config(BaseSettings):
             os.makedirs(self.RECIBOS_DIR, exist_ok=True)
 
 # Instancia única para importar en toda la aplicación
+# --- Al final de tu archivo config.py ---
+
+try:
+    # Creamos la instancia que será importada por los demás módulos
+    settings = Config()
+except Exception as e:
+    import sys
+    # Esto es vital en Google Cloud: si falta una variable, 
+    # verás este mensaje exacto en los logs.
+    print(f"\n[!] ERROR CRÍTICO DE CONFIGURACIÓN: {e}")
+    sys.exit(1)
