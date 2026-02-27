@@ -23,40 +23,41 @@ persona_service = None
 credito_service = None
 vendedor_service = None
 
+# app/api/routes.py
+
 def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_vendedores):
-    """
-    Inicializa las rutas inyectando los servicios de negocio y configurando
-    las integraciones externas como WhatsApp.
-    """
     global pago_service, persona_service, credito_service, vendedor_service
-    pago_service = servicio_pagos
-    persona_service = servicio_personas
-    credito_service = servicio_creditos
-    vendedor_service = servicio_vendedores
+    # ... (tus asignaciones de servicios anteriores) ...
     
-    # --- Configuración Dinámica de WhatsApp ---
-    if settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN:
+    from config import settings
+    
+    # 1. Instanciar el proveedor (el constructor no recibe nada)
+    provider = TwilioProvider()
+    
+    # 2. Sincronizar las credenciales desde settings manualmente 
+    # para asegurar que use lo que Pydantic validó
+    provider.sid = settings.TWILIO_ACCOUNT_SID
+    provider.token = settings.TWILIO_AUTH_TOKEN
+    provider.from_number = settings.TWILIO_WHATSAPP_NUMBER
+    
+    # 3. Solo vinculamos si el SID está presente
+    if provider.sid and provider.token:
         try:
-            provider = TwilioProvider(
-                account_sid=settings.TWILIO_ACCOUNT_SID,
-                auth_token=settings.TWILIO_AUTH_TOKEN,
-                from_number=settings.TWILIO_WHATSAPP_NUMBER
-            )
             whatsapp = WhatsAppService(provider)
             
-            # Si existen administradores en el .env, se inyectan como lista
             if settings.WHATSAPP_ADMINS:
+                # Convertimos el string de admins en lista
                 whatsapp.admin_numbers = [n.strip() for n in settings.WHATSAPP_ADMINS.split(',')]
-                
+            
             credito_service.whatsapp = whatsapp
-            logger.info("Servicio de WhatsApp vinculado exitosamente a Créditos")
+            logger.info("WhatsAppService vinculado exitosamente a CréditoService")
         except Exception as e:
-            logger.error(f"Error al configurar el proveedor de WhatsApp: {e}")
+            logger.error(f"Fallo en vinculación de WhatsApp: {e}")
     else:
-        logger.warning("WhatsApp no inicializado: Faltan credenciales en el archivo .env")
-    
-    logger.info("Rutas de la API inicializadas correctamente")
+        logger.warning("WhatsApp no configurado: Faltan credenciales en el entorno")
+
     return api_blueprint
+
 
 # --- RUTAS DE PERSONAS ---
 
