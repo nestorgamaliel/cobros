@@ -1,52 +1,59 @@
 # -*- coding: utf-8 -*-
 import os
-import yaml
-from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, computed_field
 
-# 1. Localizar y cargar el archivo env.yaml
-BASE_DIR = Path(__file__).resolve().parent
-yaml_path = BASE_DIR / 'env.yaml'
-
-if yaml_path.exists():
-    with open(yaml_path, 'r') as f:
-        config_data = yaml.safe_load(f)
-        if config_data:
-            # Inyectamos los valores al entorno para que os.getenv los reconozca
-            for key, value in config_data.items():
-                os.environ[key] = str(value)
-else:
-    # Opcional: imprimir una advertencia si el archivo no existe
-    print(f"Advertencia: No se encontró el archivo {yaml_path}")
-
-class Config:
-    # Base de Datos
-    DB_USER = os.getenv('DB_USER')
-    DB_PASSWORD = os.getenv('DB_PASSWORD')
-    DB_HOST = os.getenv('DB_HOST')
+class Config(BaseSettings):
+    """
+    Configuración centralizada con validación estricta.
+    La aplicación no arrancará si faltan variables críticas de la base de datos.
+    """
     
-    # Si os.getenv devuelve None, usamos '5432' como puerto por defecto
-    DB_PORT = os.getenv('DB_PORT') or '5432'
+    # --- Base de Datos (OBLIGATORIAS) ---
+    # Al no tener 'default=None', Pydantic exigirá que existan en el .env
+    DB_USER: str = Field(alias="DB_USER")
+    DB_PASSWORD: str = Field(alias="DB_PASSWORD")
+    DB_HOST: str = Field(alias="DB_HOST")
+    DB_NAME: str = Field(alias="DB_NAME")
+    DB_PORT: str = Field(default="5432", alias="DB_PORT")
+
+    @computed_field
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        """URL de conexión construida dinámicamente."""
+        return f'postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}'
+
+    # --- Configuración de la Aplicación ---
+    APP_HOST: str = Field(default="127.0.0.1", alias="APP_HOST")
+    APP_PORT: int = Field(default=5000, alias="APP_PORT")
+    RECIBOS_DIR: str = Field(default="recibos", alias="RECIBOS_DIR")
+    LOGO_PATH: str = os.path.join('app', 'recursos', 'Lender_logo.jpg')
+
+    # --- Cloud Storage (GCS) ---
+    GCS_BUCKET_NAME: str = Field(default="recibos-nestor-gcp", alias="GCS_BUCKET_NAME")
     
-    DB_NAME = os.getenv('DB_NAME')
-    
-    # Construcción de la URL de SQLAlchemy
-    SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+    @computed_field
+    @property
+    def GCS_PUBLIC_URL_BASE(self) -> str:
+        """URL pública de acceso a archivos en GCS."""
+        return os.getenv("GCS_PUBLIC_URL_BASE", f"https://storage.googleapis.com/{self.GCS_BUCKET_NAME}")
 
-    # Configuración de la Aplicación
-    APP_HOST = os.getenv('APP_HOST', '127.0.0.1')
-    APP_PORT = int(os.getenv('APP_PORT', 5000))
+    # --- Integraciones (OBLIGATORIAS para WhatsApp) ---
+    TWILIO_ACCOUNT_SID: str = Field(alias="TWILIO_ACCOUNT_SID")
+    TWILIO_AUTH_TOKEN: str = Field(alias="TWILIO_AUTH_TOKEN")
+    TWILIO_WHATSAPP_NUMBER: str = Field(default="whatsapp:+14155238886", alias="TWILIO_WHATSAPP_NUMBER")
+    WHATSAPP_ADMINS: str = Field(default="", alias="WHATSAPP_ADMINS")
 
-    # Configuración de Archivos y Rutas
-    RECIBOS_DIR = os.getenv('RECIBOS_DIR', 'recibos')
-    LOGO_PATH = os.path.join('recursos', 'Lender_logo.jpg')
+    # --- Configuración del archivo .env ---
+    model_config = SettingsConfigDict(
+        env_file=".env", 
+        env_file_encoding="utf-8",
+        extra="ignore" # Ignora otras variables que puedan estar en el .env
+    )
 
-    # Cloud Storage
-    GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "recibos-nestor-gcp")
-    GCS_PUBLIC_URL_BASE = os.getenv("GCS_PUBLIC_URL_BASE", "https://storage.googleapis.com/recibos-nestor-gcp")
+    def init_app(self, app):
+        """Crea las carpetas necesarias al iniciar la app."""
+        if not os.path.exists(self.RECIBOS_DIR):
+            os.makedirs(self.RECIBOS_DIR, exist_ok=True)
 
-    @staticmethod
-    def init_app(app):
-        os.makedirs(Config.RECIBOS_DIR, exist_ok=True)
-
-# Instancia para uso rápido en el resto de la app
-settings = Config()
+# Instancia única para importar en toda la aplicación

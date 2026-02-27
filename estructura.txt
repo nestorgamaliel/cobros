@@ -1,24 +1,28 @@
+tree -I 'source|bin|venv|*pycache*' > estructura.txt
+-----------------------------------------------------
+
 .
 ├── Diagrama_Despliegue.png
 ├── Dockerfile
 ├── README.md
-├── __pycache__
+├── alembic.ini
+├── alembic_ignore.txt
 ├── ambiente.scr
 ├── app
 │   ├── __init__.py
-│   ├── __pycache__
 │   ├── api
 │   │   ├── __init__.py
-│   │   ├── __pycache__
-│   │   ├── routes.py
-│   │   └── rutas_personas.py
+│   │   └── routes.py
 │   ├── models
 │   │   ├── __init__.py
-│   │   ├── __pycache__
 │   │   └── models.py
+│   ├── schemas
+│   │   ├── __init__.py
+│   │   ├── credito.py
+│   │   ├── pago.py
+│   │   └── persona.py
 │   ├── services
 │   │   ├── __init__.py
-│   │   ├── __pycache__
 │   │   ├── credito_service.py
 │   │   ├── db_service.py
 │   │   ├── pago_service.py
@@ -28,78 +32,30 @@
 │   │   └── whatsapp_service.py
 │   └── utils
 │       ├── __init__.py
-│       ├── __pycache__
 │       ├── gcs_uploader.py
 │       └── logger.py
-├── backup-dbå
-│   ├── dump-lender-202511242030.sql
-│   └── dump-lender-202511242031.sql
 ├── config.py
+├── crear_estructura.sh
 ├── credito_gestion.erd
 ├── env.yaml
 ├── estructura.txt
 ├── instrucciones.txt
+├── migrations
+│   ├── README
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions
+│       ├── 1deaf26c981a_refactor_credito_cancelado.py
+│       ├── 5a1dbc921fa4_check.py
+│       ├── 5d5b5a653ffc_boolean.py
+│       ├── 6998ebe3ca93_renombrar_comisiones_a_credito_.py
+│       ├── 6a40ebc5087f_prueba_conexion.py
+│       └── b55e1cdc9872_refactor_total_a_integer_y_comisiones.py
 ├── recibos
 ├── recursos
 │   └── Lender_logo.jpg
 ├── requirements.txt
 ├── run.py
-├── source
-│   ├── Scripts
-│   │   ├── Activate.ps1
-│   │   ├── __pycache__
-│   │   ├── activate
-│   │   ├── activate.bat
-│   │   ├── deactivate.bat
-│   │   ├── pywin32_postinstall.py
-│   │   └── pywin32_testall.py
-│   ├── pyvenv.cfg
-│   └── share
-│       ├── jupyter
-│       │   └── kernels
-│       │       └── python3
-│       │           ├── kernel.json
-│       │           ├── logo-32x32.png
-│       │           ├── logo-64x64.png
-│       │           └── logo-svg.svg
-│       └── man
-│           └── man1
-│               └── ipython.1
-├── venv
-│   ├── Scripts
-│   │   ├── Activate.ps1
-│   │   ├── activate
-│   │   ├── activate.bat
-│   │   └── deactivate.bat
-│   ├── bin
-│   │   ├── Activate.ps1
-│   │   ├── activate
-│   │   ├── activate.csh
-│   │   ├── activate.fish
-│   │   ├── chardetect
-│   │   ├── dotenv
-│   │   ├── flask
-│   │   ├── gunicorn
-│   │   ├── normalizer
-│   │   ├── pip
-│   │   ├── pip3
-│   │   ├── pip3.13
-│   │   ├── pyrsa-decrypt
-│   │   ├── pyrsa-encrypt
-│   │   ├── pyrsa-keygen
-│   │   ├── pyrsa-priv2pub
-│   │   ├── pyrsa-sign
-│   │   ├── pyrsa-verify
-│   │   ├── python -> python3.13
-│   │   ├── python3 -> python3.13
-│   │   └── python3.13 -> /opt/homebrew/opt/python@3.13/bin/python3.13
-│   ├── include
-│   │   ├── python3.13
-│   │   └── site
-│   │       └── python3.13
-│   │           └── greenlet
-│   │               └── greenlet.h
-│   └── pyvenv.cfg
 └── wsgi.py
 
-32 directories, 71 files
+11 directories, 45 files

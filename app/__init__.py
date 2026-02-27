@@ -1,16 +1,14 @@
+# -*- coding: utf-8 -*-
 import os
 from flask import Flask
-from app.services import BaseDatos, GeneradorRecibos, ServicioPagos
-from app.services import ServicioPersonas, ServicioCreditos, ServicioVendedores
-from app.api import init_routes
-from app.utils.logger import setup_logger
-# Importamos el objeto settings
+# Importamos settings y logger primero para asegurar que la config sea válida
 from config import settings
+from app.utils.logger import setup_logger
 
 # Configurar logger
 logger = setup_logger(__name__)
 
-# Variables globales para los servicios
+# Variables globales para los servicios (Singleton pattern manual)
 db_service = None
 pdf_service = None
 pago_service = None
@@ -19,23 +17,25 @@ credito_service = None
 vendedor_service = None
 
 def create_app(test_config=None):
+    """Factory para crear y configurar la aplicación Flask."""
     app = Flask(__name__, instance_relative_config=True)
     
-    # 1. Cargar configuración
+    # 1. Cargar configuración desde el objeto Pydantic
     if test_config is None:
         app.config.from_object(settings)
     else:
         app.config.from_mapping(test_config)
     
-    # 2. Inicializar carpetas (GCS, Recibos, etc.)
+    # 2. Inicializar carpetas físicas (como RECIBOS_DIR)
     settings.init_app(app)
     
-    # 3. PRIMERO inicializamos los servicios
-    # Esto llena las variables globales db_service, pago_service, etc.
+    # 3. Inicializar servicios de negocio y base de datos
+    # Si el .env está incompleto, la app fallará aquí con un error claro
     inicializar_servicios()
     
-    # 4. DESPUÉS registramos el blueprint pasando los servicios ya creados
-    from app.api import init_routes
+    # 4. Registrar rutas (Blueprint)
+    # Se importa aquí localmente para evitar ciclos de importación
+    from app.api.routes import init_routes
     
     app.register_blueprint(
         init_routes(pago_service, persona_service, credito_service, vendedor_service),
@@ -46,30 +46,45 @@ def create_app(test_config=None):
     def index():
         return {
             'status': 'ok', 
-            'version': '2.0 (DTO Enabled)',
-            'message': 'Sistema de Gestión de Cobros funcionando'
+            'version': '3.0 (Strict Config)',
+            'message': 'Sistema de Gestión de Cobros funcionando correctamente',
+            'environment': 'Production' if not app.debug else 'Development'
         }
     
-    logger.info("Aplicación Flask y Rutas DTO inicializadas")
+    logger.info("Aplicación Flask inicializada exitosamente")
     return app
 
 def inicializar_servicios():
-    """Inicializa los servicios centralizados usando el objeto settings."""
+    """Inicializa los servicios centralizados inyectando las dependencias necesarias."""
     global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service
     
-    # Usamos settings directamente para evitar pasar strings por todos lados
-    db_service = BaseDatos(settings.SQLALCHEMY_DATABASE_URI)
-    pdf_service = GeneradorRecibos(settings.RECIBOS_DIR)
-    
-    # Inyección de dependencias
-    pago_service = ServicioPagos(db_service, pdf_service)
-    persona_service = ServicioPersonas(db_service)
-    credito_service = ServicioCreditos(db_service)    
-    vendedor_service = ServicioVendedores(db_service)
-    
-    logger.info("Servicios inicializados correctamente")
+    try:
+        # Importaciones tardías para evitar dependencias circulares
+        from app.services.db_service import BaseDatos
+        from app.services.pdf_service import GeneradorRecibos
+        from app.services.pago_service import ServicioPagos
+        from app.services.persona_service import ServicioPersonas
+        from app.services.credito_service import ServicioCreditos
+        from app.services.vendedor_service import ServicioVendedores
 
-# Getters (se mantienen igual para no romper compatibilidad en otros archivos)
+        # 1. Servicios base
+        db_service = BaseDatos(settings.SQLALCHEMY_DATABASE_URI)
+        pdf_service = GeneradorRecibos(settings.RECIBOS_DIR)
+        
+        # 2. Servicios de negocio con inyección de dependencias
+        pago_service = ServicioPagos(db_service, pdf_service)
+        persona_service = ServicioPersonas(db_service)
+        credito_service = ServicioCreditos(db_service)    
+        vendedor_service = ServicioVendedores(db_service)
+        
+        logger.info("Todos los servicios del sistema han sido cargados")
+        
+    except Exception as e:
+        logger.error(f"Error crítico al inicializar servicios: {str(e)}")
+        # Re-lanzamos el error porque sin servicios la app no debe funcionar
+        raise e
+
+# --- Getters para acceso externo (opcional) ---
 def get_db_service(): return db_service
 def get_pdf_service(): return pdf_service
 def get_pago_service(): return pago_service
