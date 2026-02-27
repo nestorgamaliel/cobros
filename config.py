@@ -56,9 +56,9 @@ class Config(BaseSettings):
         if not os.path.exists(self.RECIBOS_DIR):
             os.makedirs(self.RECIBOS_DIR, exist_ok=True)
 
+
 # Instancia única para importar en toda la aplicación
 # --- Al final de tu archivo config.py ---
-
 try:
     # Creamos la instancia que será importada por los demás módulos
     settings = Config()
@@ -68,3 +68,4 @@ except Exception as e:
     # verás este mensaje exacto en los logs.
     print(f"\n[!] ERROR CRÍTICO DE CONFIGURACIÓN: {e}")
     sys.exit(1)
+
