@@ -6,7 +6,7 @@ from decimal import Decimal
 class PagoBase(BaseModel):
     credito_id: int
     fecha: date
-    monto: Decimal = Field(gt=0, description="Monto destinado a capital")
+    monto: Decimal = Field(ge=0, description="Monto destinado a capital")
     multa: Decimal = Field(default=0.00, ge=0)
     intereses: Decimal = Field(default=0.00, ge=0)
     monto_comision: Decimal = Field(default=0.00, ge=0)

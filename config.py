@@ -27,7 +27,13 @@ class Config(BaseSettings):
     APP_HOST: str = Field(default="127.0.0.1", alias="APP_HOST")
     APP_PORT: int = Field(default=5000, alias="APP_PORT")
     RECIBOS_DIR: str = Field(default="recibos", alias="RECIBOS_DIR")
-    LOGO_PATH: str = os.path.join('app', 'recursos', 'Lender_logo.jpg')
+    
+    @computed_field
+    @property
+    def LOGO_PATH(self) -> str:
+        """Ruta absoluta al logo para que siempre se encuentre."""
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(base_dir, 'recursos', 'Lender_logo.jpg')
 
     # --- Cloud Storage (GCS) ---
     GCS_BUCKET_NAME: str = Field(default="recibos-nestor-gcp", alias="GCS_BUCKET_NAME")
