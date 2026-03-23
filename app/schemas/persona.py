@@ -1,9 +1,11 @@
 from pydantic import BaseModel, Field, EmailStr
 from datetime import date, datetime
 from typing import Optional
+from .base import BaseSchema # Importas tu nueva base
+
 
 # DTO Base: Atributos compartidos
-class PersonaBase(BaseModel):
+class PersonaBase(BaseSchema):
     nombres: str = Field(..., min_length=2, max_length=100)
     apellidos: str = Field(..., min_length=2, max_length=100)
     direccion: Optional[str] = Field(None, max_length=255)

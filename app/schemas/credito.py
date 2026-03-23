@@ -2,8 +2,9 @@ from pydantic import BaseModel, Field, field_validator
 from datetime import date
 from typing import Optional
 from decimal import Decimal
+from .base import BaseSchema # Importas tu nueva base
 
-class CreditoBase(BaseModel):
+class CreditoBase(BaseSchema):
     persona_id: int
     vendedor_id: int
     fecha: date

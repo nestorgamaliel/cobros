@@ -2,8 +2,9 @@ from pydantic import BaseModel, Field
 from datetime import date
 from typing import Optional
 from decimal import Decimal
+from .base import BaseSchema # Importas tu nueva base
 
-class PagoBase(BaseModel):
+class PagoBase(BaseSchema):
     credito_id: int
     fecha: date
     monto: Decimal = Field(ge=0, description="Monto destinado a capital")
