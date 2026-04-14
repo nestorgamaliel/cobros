@@ -115,7 +115,7 @@ class GeneradorRecibos(GeneradorDocumentos):
 
 
 class GeneradorFiniquitos(GeneradorDocumentos):
-    """Especializada en generar finiquitos legales."""
+    """Especializada en generar finiquitos legales para Lender Finanzas."""
 
     def generar_finiquito_pdf(self, persona, credito, datos_firmante=None):
         if datos_firmante is None:
@@ -126,32 +126,56 @@ class GeneradorFiniquitos(GeneradorDocumentos):
             }
 
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, leftMargin=inch, rightMargin=inch, topMargin=inch, bottomMargin=inch)
+        doc = SimpleDocTemplate(
+            buffer, 
+            pagesize=letter, 
+            leftMargin=inch, 
+            rightMargin=inch, 
+            topMargin=inch, 
+            bottomMargin=inch
+        )
         styles = getSampleStyleSheet()
         
-        # Estilo para el cuerpo legal (Justificado)
-        legal_style = ParagraphStyle('LegalBody', parent=styles['Normal'], fontSize=11, leading=14, alignment=1)
+        # AJUSTE 1: Alineación Justificada (alignment=4) para ambos lados
+        legal_style = ParagraphStyle(
+            'LegalBody', 
+            parent=styles['Normal'], 
+            fontSize=11, 
+            leading=16, 
+            alignment=4  
+        )
+        
         elements = []
 
-        # Logo
+        # Logo de cabecera
         if os.path.exists(self.logo_path):
-            logo = Image(self.logo_path, width=2.2*inch, height=0.7*inch)
+            logo = Image(self.logo_path, width=2.5*inch, height=0.8*inch)
             elements.append(logo)
             elements.append(Spacer(1, 30))
 
         elements.append(Paragraph("<b>A QUIEN INTERESE:</b>", styles['Normal']))
         elements.append(Spacer(1, 20))
 
-        # Texto del Finiquito
+        # AJUSTE 3: Lógica basada en el campo 'sexo' (F/M)
+        # Se determina si es "la señora" o "el señor" dinámicamente
+        genero_val = getattr(persona, 'sexo', 'M').upper()
+        tratamiento = "la señora" if genero_val == 'F' else "el señor"
+
+        # AJUSTE 2 & 4: Negritas en DUI/Código y limpieza de nombres
         monto_letras = self._monto_a_letras(credito.total_credito_proyectado)
+        
+        # Limpiamos posibles etiquetas HTML que vengan en el string del nombre
+        nombre_firmante_limpio = datos_firmante['nombre'].replace("<b>", "").replace("</b>", "")
+
         cuerpo = f"""
-        <b>{datos_firmante['nombre']}</b>, mayor de edad, Abogado y Notario, de este domicilio, 
+        {nombre_firmante_limpio}, mayor de edad, Abogado y Notario, de este domicilio, 
         con Documento Único de Identidad número {datos_firmante['dui']}, en calidad de {datos_firmante['cargo']} 
-        de <b>LENDER FINANZAS</b>, hace constar que la señora <b>{persona.nombres} {persona.apellidos}</b>, 
-        identificada con su Documento Único de Identidad número {persona.dui}, ha cancelado la cantidad de 
+        de <b>LENDER FINANZAS</b>, hace constar que {tratamiento} <b>{persona.nombres} {persona.apellidos}</b>, 
+        identificado con su Documento Único de Identidad número <b>{persona.dui}</b>, ha cancelado la cantidad de 
         <b>{monto_letras} (${credito.total_credito_proyectado:,.2f})</b>, correspondiente al crédito registrado 
-        bajo el código {credito.credito_id}.
+        bajo el código <b>{credito.credito_id}</b>.
         """
+        
         elements.append(Paragraph(cuerpo, legal_style))
         elements.append(Spacer(1, 15))
 
@@ -162,27 +186,26 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         Por tal razón se extiende el presente <b>FINIQUITO</b>, en el distrito de San Salvador, Municipio de San Salvador Centro, 
         Departamento de San Salvador, a los {hoy.day} días del mes de {meses[hoy.month-1]} del año {hoy.year}.
         """
+        
         elements.append(Paragraph(pie_fecha, legal_style))
         
-        # Espacio para firma
+        # Sección de firmas centrada
         elements.append(Spacer(1, 80))
+        
+        # AJUSTE 4: Firma limpia sin etiquetas de texto visibles
         firma_info = [
             ["________________________"],
-            [f"<b>{datos_firmante['nombre']}</b>"],
+            [f"<b>{nombre_firmante_limpio}</b>"],
             [f"{datos_firmante['cargo']} | LENDER FINANZAS"]
         ]
+        
         t_firma = Table(firma_info, colWidths=[350])
-        t_firma.setStyle(TableStyle([('ALIGN', (0, 0), (-1, -1), 'CENTER'), ('FONTNAME', (0, 1), (0, 1), 'Helvetica-Bold')]))
+        t_firma.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 1), (0, 1), 'Helvetica-Bold')
+        ]))
         elements.append(t_firma)
 
         doc.build(elements)
         
-        # Nombre y guardado
-        nombre_archivo = f"finiquito_{credito.credito_id}_{hoy.strftime('%Y%m%d%H%M%S')}.pdf"
-        ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
-        
-        with open(ruta_archivo, 'wb') as f:
-            f.write(buffer.getvalue())
-        
-        url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "finiquitos")
-        return ruta_archivo, nombre_archivo, url_publica
+        # Generación de archivo y subida

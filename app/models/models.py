@@ -102,3 +102,4 @@ class Finiquito(Base):
     fecha_generacion = Column(DateTime, default=datetime.datetime.now)
     url_documento = Column(String(500), nullable=False)
     firmante = Column(String(200)) # Guardamos quién firmó en ese momento   
+    monto_cancelado = Column(Numeric(10, 2), nullable=False)    
