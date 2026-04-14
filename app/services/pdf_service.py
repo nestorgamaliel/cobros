@@ -184,7 +184,7 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         # Tabla de firma centrada y limpia [cite: 3]
         firma_info = [
             ["________________________"],
-            [f"<b>{nombre_firmante_limpio}</b>"],
+            [f"{nombre_firmante_limpio}"],
             [f"{datos_firmante['cargo']} | LENDER FINANZAS"]
         ]
         
