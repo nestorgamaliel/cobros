@@ -7,8 +7,8 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT
-from num2words import num2words # Recuerda agregar num2words a tu requirements.txt
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_JUSTIFY
+from num2words import num2words 
 
 from app.utils.logger import setup_logger
 from app.utils.gcs_uploader import subir_archivo_a_gcs
@@ -54,7 +54,6 @@ class GeneradorRecibos(GeneradorDocumentos):
         right_style = ParagraphStyle('RightStyle', parent=styles['Normal'], alignment=TA_RIGHT)
         elements = []
         
-        # Logo
         if os.path.exists(self.logo_path):
             logo = Image(self.logo_path, width=2.5*inch, height=1*inch)
             elements.append(logo)
@@ -62,19 +61,16 @@ class GeneradorRecibos(GeneradorDocumentos):
         elements.append(Paragraph(f"<b>RECIBO DE PAGO #{pago.pago_id}</b>", styles['Title']))
         elements.append(Spacer(1, 20))
         
-        # Fecha emisión
         fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
         elements.append(Paragraph(f"<b>Fecha de emisión:</b> {fecha_actual}", right_style))
         elements.append(Spacer(1, 20))
         
-        # Tabla Persona
         persona_info = [["INFORMACIÓN DEL CLIENTE"], [f"Nombre: {persona.nombres} {persona.apellidos}"], [f"DUI: {persona.dui}"], [f"Teléfono: {persona.telefono}"]]
         t_persona = Table(persona_info, colWidths=[450])
         t_persona.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), ('ALIGN', (0, 0), (-1, 0), 'CENTER'), ('BOX', (0, 0), (-1, -1), 1, colors.black)]))
         elements.append(t_persona)
         elements.append(Spacer(1, 20))
         
-        # Tabla Crédito
         fecha_credito = getattr(credito, 'fecha', datetime.datetime.now()).strftime('%d/%m/%Y')
         credito_info = [
             ["INFORMACIÓN DEL CRÉDITO"],
@@ -87,7 +83,6 @@ class GeneradorRecibos(GeneradorDocumentos):
         elements.append(t_credito)
         elements.append(Spacer(1, 20))
         
-        # Detalle de Pago
         saldo = datos_adicionales.get('saldo', 0) if datos_adicionales else 0
         pago_info = [["DETALLE DEL PAGO ACTUAL"], [f"Fecha de pago: {pago.fecha.strftime('%d/%m/%Y')}", f"Monto pagado: ${pago.monto:,.2f}"]]
         if pago.intereses: pago_info.append(["", f"Intereses: ${pago.intereses:,.2f}"])
@@ -99,10 +94,8 @@ class GeneradorRecibos(GeneradorDocumentos):
         elements.append(t_pago)
         elements.append(Spacer(1, 40))
         
-        # Firma
         elements.append(Table([["________________________"], ["Evelyn García | Gerente Operaciones"]], colWidths=[450], style=[('ALIGN', (0,0), (-1,-1), 'CENTER')]))
         
-        # Generación de archivo
         doc.build(elements)
         nombre_archivo = f"recibo_pago_{pago.pago_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
         ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
@@ -118,6 +111,7 @@ class GeneradorFiniquitos(GeneradorDocumentos):
     """Especializada en generar finiquitos legales para Lender Finanzas."""
 
     def generar_finiquito_pdf(self, persona, credito, datos_firmante=None):
+        """Genera el PDF legal del finiquito, lo guarda localmente y lo sube a GCS."""
         if datos_firmante is None:
             datos_firmante = {
                 "nombre": "EVELYN YANETH GARCIA BAIRES",
@@ -136,18 +130,17 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         )
         styles = getSampleStyleSheet()
         
-        # AJUSTE 1: Alineación Justificada (alignment=4) para ambos lados
+        # Ajuste: Alineación Justificada y estilo legal
         legal_style = ParagraphStyle(
             'LegalBody', 
             parent=styles['Normal'], 
             fontSize=11, 
             leading=16, 
-            alignment=4  
+            alignment=TA_JUSTIFY # Justificado a ambos lados [cite: 3]
         )
         
         elements = []
 
-        # Logo de cabecera
         if os.path.exists(self.logo_path):
             logo = Image(self.logo_path, width=2.5*inch, height=0.8*inch)
             elements.append(logo)
@@ -156,17 +149,16 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         elements.append(Paragraph("<b>A QUIEN INTERESE:</b>", styles['Normal']))
         elements.append(Spacer(1, 20))
 
-        # AJUSTE 3: Lógica basada en el campo 'sexo' (F/M)
-        # Se determina si es "la señora" o "el señor" dinámicamente
-        genero_val = getattr(persona, 'sexo', 'M').upper()
-        tratamiento = "la señora" if genero_val == 'F' else "el señor"
+        # Lógica de género basada en campo 'sexo' (F/M) [cite: 3]
+        sexo_val = getattr(persona, 'sexo', 'M').upper()
+        tratamiento = "la señora" if sexo_val == 'F' else "el señor"
 
-        # AJUSTE 2 & 4: Negritas en DUI/Código y limpieza de nombres
         monto_letras = self._monto_a_letras(credito.total_credito_proyectado)
         
-        # Limpiamos posibles etiquetas HTML que vengan en el string del nombre
+        # Limpieza de etiquetas <b> en el nombre del firmante [cite: 3]
         nombre_firmante_limpio = datos_firmante['nombre'].replace("<b>", "").replace("</b>", "")
 
+        # Cuerpo del documento con DUI en negrita [cite: 3]
         cuerpo = f"""
         {nombre_firmante_limpio}, mayor de edad, Abogado y Notario, de este domicilio, 
         con Documento Único de Identidad número {datos_firmante['dui']}, en calidad de {datos_firmante['cargo']} 
@@ -179,7 +171,6 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         elements.append(Paragraph(cuerpo, legal_style))
         elements.append(Spacer(1, 15))
 
-        # Fecha de emisión legal
         hoy = datetime.datetime.now()
         meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
         pie_fecha = f"""
@@ -188,11 +179,9 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         """
         
         elements.append(Paragraph(pie_fecha, legal_style))
-        
-        # Sección de firmas centrada
         elements.append(Spacer(1, 80))
         
-        # AJUSTE 4: Firma limpia sin etiquetas de texto visibles
+        # Tabla de firma centrada y limpia [cite: 3]
         firma_info = [
             ["________________________"],
             [f"<b>{nombre_firmante_limpio}</b>"],
@@ -206,6 +195,18 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         ]))
         elements.append(t_firma)
 
+        # Construcción del PDF
         doc.build(elements)
         
-        # Generación de archivo y subida
+        # Gestión de archivos
+        nombre_archivo = f"finiquito_{credito.credito_id}_{hoy.strftime('%Y%m%d%H%M%S')}.pdf"
+        ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
+        
+        with open(ruta_archivo, 'wb') as f:
+            f.write(buffer.getvalue())
+        
+        # Subida a Google Cloud Storage
+        url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "finiquitos")
+        
+        # RETORNO DE VALORES (Evita el error NoneType) [cite: 5]
+        return ruta_archivo, nombre_archivo, url_publica
