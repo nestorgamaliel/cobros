@@ -1,5 +1,7 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Numeric, DateTime, Boolean, func
 from sqlalchemy.orm import relationship, declarative_base
+import datetime
+
 
 Base = declarative_base()
 
@@ -88,6 +90,15 @@ class CreditoComision(Base):
     porcentaje_comision = Column(Numeric(5, 2), nullable=False)
     monto_total_comision = Column(Numeric(10, 2), nullable=False)
     tipo_comision_id = Column(Integer, nullable=False, default=1)
-    fum = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    
+    fum = Column(DateTime, server_default=func.now(), onupdate=func.now())   
     credito = relationship("Credito", backref="comision")
+
+
+class Finiquito(Base):
+    __tablename__ = 'credito_finiquito'
+    
+    credito_id = Column(Integer, ForeignKey('credito.credito_id'), nullable=False)
+    finiquito_id = Column(Integer, primary_key=True)
+    fecha_generacion = Column(DateTime, default=datetime.datetime.now)
+    url_documento = Column(String(500), nullable=False)
+    firmante = Column(String(200)) # Guardamos quién firmó en ese momento   

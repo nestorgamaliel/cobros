@@ -14,7 +14,7 @@ from app.services.whatsapp_service import WhatsAppService, TwilioProvider
 
 logger = setup_logger(__name__)
 
-def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_vendedores):
+def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_vendedores, servicio_finiquitos):
     """
     Inyecta los servicios y registra las rutas dentro de un Blueprint.
     Al definir las funciones aquí, los servicios nunca serán None.
@@ -142,6 +142,27 @@ def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_v
         if os.path.exists(ruta_recibo):
             return send_file(ruta_recibo, as_attachment=True)
         return jsonify({'error': 'Archivo no encontrado'}), 404
+
+
+    @api_blueprint.route('/credito/<int:credito_id>/generar-finiquito', methods=['POST'])
+    def generar_finiquito(credito_id):
+        try:
+            logger.info(f"Iniciando generación manual de finiquito para crédito: {credito_id}")
+            
+            url, error = servicio_finiquitos.generar_finiquito_manual(credito_id)
+            
+            if error:
+                return jsonify({'error': error}), 400
+                
+            return jsonify({
+                'mensaje': 'Finiquito generado y registrado correctamente',
+                'url_documento': url
+            }), 201
+            
+        except Exception as e:
+            logger.error(f"Error en POST /generar-finiquito: {str(e)}")
+            return jsonify({'error': f"Error al procesar finiquito: {str(e)}"}), 500
+
 
     # --- REPORTES ---
 

@@ -213,3 +213,32 @@ class BaseDatos:
 
     def cerrar(self):
         self.session.close()
+
+
+    def insertar_registro_finiquito(self, credito_id, url_documento, monto_cancelado, firmante=None):
+            """
+            Registra la generación de un nuevo finiquito en la tabla credito_finiquito.
+            """
+            try:
+                # Si no se envía firmante, usamos el valor por defecto
+                firmante_final = firmante or "EVELYN YANETH GARCIA BAIRES"
+                
+                sql = text("""
+                    INSERT INTO credito_finiquito (credito_id, url_documento, monto_cancelado, fecha_generacion, firmante)
+                    VALUES (:credito_id, :url, :monto, :fecha, :firmante)
+                """)
+                
+                self.session.execute(sql, {
+                    "credito_id": credito_id,
+                    "url": url_documento,
+                    "monto": monto_cancelado,
+                    "fecha": datetime.datetime.now(),
+                    "firmante": firmante_final
+                })
+                self.session.commit()
+                logger.info(f"Registro de finiquito guardado para crédito {credito_id}")
+                return True
+            except Exception as e:
+                self.session.rollback()
+                logger.error(f"Error al insertar en credito_finiquito: {str(e)}")
+                raise        

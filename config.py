@@ -45,11 +45,12 @@ class Config(BaseSettings):
         return os.getenv("GCS_PUBLIC_URL_BASE", f"https://storage.googleapis.com/{self.GCS_BUCKET_NAME}")
 
     # --- Integraciones (OBLIGATORIAS para WhatsApp) ---
-    TWILIO_ACCOUNT_SID: str = Field(alias="TWILIO_ACCOUNT_SID")
-    TWILIO_AUTH_TOKEN: str = Field(alias="TWILIO_AUTH_TOKEN")
+    TWILIO_ACCOUNT_SID: str | None = Field(default=None, alias="TWILIO_ACCOUNT_SID")
+    TWILIO_AUTH_TOKEN: str | None = Field(default=None, alias="TWILIO_AUTH_TOKEN")
+    
     TWILIO_WHATSAPP_NUMBER: str = Field(default="whatsapp:+14155238886", alias="TWILIO_WHATSAPP_NUMBER")
     WHATSAPP_ADMINS: str = Field(default="", alias="WHATSAPP_ADMINS")
-
+    
     # --- Configuración del archivo .env ---
     model_config = SettingsConfigDict(
         env_file=".env", 
