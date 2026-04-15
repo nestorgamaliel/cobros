@@ -193,7 +193,7 @@ class GeneradorFiniquitos(GeneradorDocumentos):
             img_firma = Image(ruta_firma, width=2.2*inch, height=0.8*inch)
             logger.info("Firma cargada correctamente en el PDF.")
         else:
-            img_firma = Image(ruta_firma, width=2.2*inch, height=0.8*inch)
+            img_firma = Image(ruta_firma, width=1.6*inch, height=0.8*inch)
             logger.warning(f"ADVERTENCIA: No se encontró la firma en {ruta_firma}")
 
 
