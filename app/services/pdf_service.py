@@ -107,106 +107,121 @@ class GeneradorRecibos(GeneradorDocumentos):
         return ruta_archivo, nombre_archivo, url_publica
 
 
-class GeneradorFiniquitos(GeneradorDocumentos):
-    """Especializada en generar finiquitos legales para Lender Finanzas."""
+    class GeneradorFiniquitos(GeneradorDocumentos):
+        """Especializada en generar finiquitos legales para Lender Finanzas."""
 
-    def generar_finiquito_pdf(self, persona, credito, datos_firmante=None):
-        """Genera el PDF legal del finiquito, lo guarda localmente y lo sube a GCS."""
-        if datos_firmante is None:
-            datos_firmante = {
-                "nombre": "EVELYN YANETH GARCIA BAIRES",
-                "cargo": "Gerente Legal",
-                "dui": "02248960-2"
-            }
+        def generar_finiquito_pdf(self, persona, credito, datos_firmante=None):
+            """Genera el PDF legal del finiquito con firma digital, lo guarda localmente y lo sube a GCS."""
+            if datos_firmante is None:
+                datos_firmante = {
+                    "nombre": "EVELYN YANETH GARCIA BAIRES",
+                    "cargo": "Gerente Legal",
+                    "dui": "02248960-2"
+                }
 
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(
-            buffer, 
-            pagesize=letter, 
-            leftMargin=inch, 
-            rightMargin=inch, 
-            topMargin=inch, 
-            bottomMargin=inch
-        )
-        styles = getSampleStyleSheet()
-        
-        # Ajuste: Alineación Justificada y estilo legal
-        legal_style = ParagraphStyle(
-            'LegalBody', 
-            parent=styles['Normal'], 
-            fontSize=11, 
-            leading=16, 
-            alignment=TA_JUSTIFY # Justificado a ambos lados [cite: 3]
-        )
-        
-        elements = []
+            # Configuración de la firma (ajusta la ruta según tu estructura de carpetas)
+            # Asumimos que está en la misma carpeta que el logo
+            ruta_firma = os.path.join(os.path.dirname(self.logo_path), "FirmaLegal.png")
 
-        if os.path.exists(self.logo_path):
-            logo = Image(self.logo_path, width=2.5*inch, height=0.8*inch)
-            elements.append(logo)
-            elements.append(Spacer(1, 30))
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(
+                buffer, 
+                pagesize=letter, 
+                leftMargin=inch, 
+                rightMargin=inch, 
+                topMargin=inch, 
+                bottomMargin=inch
+            )
+            styles = getSampleStyleSheet()
+            
+            # Estilo legal justificado
+            legal_style = ParagraphStyle(
+                'LegalBody', 
+                parent=styles['Normal'], 
+                fontSize=11, 
+                leading=16, 
+                alignment=TA_JUSTIFY
+            )
+            
+            elements = []
 
-        elements.append(Paragraph("<b>A QUIEN INTERESE:</b>", styles['Normal']))
-        elements.append(Spacer(1, 20))
+            # Logo de la empresa
+            if os.path.exists(self.logo_path):
+                logo = Image(self.logo_path, width=2.5*inch, height=0.8*inch)
+                elements.append(logo)
+                elements.append(Spacer(1, 30))
 
-        # Lógica de género basada en campo 'sexo' (F/M) [cite: 3]
-        sexo_val = getattr(persona, 'sexo', 'M').upper()
-        tratamiento = "la señora" if sexo_val == 'F' else "el señor"
+            elements.append(Paragraph("<b>A QUIEN INTERESE:</b>", styles['Normal']))
+            elements.append(Spacer(1, 20))
 
-        monto_letras = self._monto_a_letras(credito.total_credito_proyectado)
-        
-        # Limpieza de etiquetas <b> en el nombre del firmante [cite: 3]
-        nombre_firmante_limpio = datos_firmante['nombre'].replace("<b>", "").replace("</b>", "")
+            # Lógica de género
+            sexo_val = getattr(persona, 'sexo', 'M').upper()
+            tratamiento = "la señora" if sexo_val == 'F' else "el señor"
 
-        # Cuerpo del documento con DUI en negrita [cite: 3]
-        cuerpo = f"""
-        {nombre_firmante_limpio}, mayor de edad, Abogado y Notario, de este domicilio, 
-        con Documento Único de Identidad número {datos_firmante['dui']}, en calidad de {datos_firmante['cargo']} 
-        de <b>LENDER FINANZAS</b>, hace constar que {tratamiento} <b>{persona.nombres} {persona.apellidos}</b>, 
-        identificado con su Documento Único de Identidad número <b>{persona.dui}</b>, ha cancelado la cantidad de 
-        <b>{monto_letras} (${credito.total_credito_proyectado:,.2f})</b>, correspondiente al crédito registrado 
-        bajo el código <b>{credito.credito_id}</b>.
-        """
-        
-        elements.append(Paragraph(cuerpo, legal_style))
-        elements.append(Spacer(1, 15))
+            monto_letras = self._monto_a_letras(credito.total_credito_proyectado)
+            nombre_firmante_limpio = datos_firmante['nombre'].replace("<b>", "").replace("</b>", "")
 
-        hoy = datetime.datetime.now()
-        meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
-        pie_fecha = f"""
-        Por tal razón se extiende el presente <b>FINIQUITO</b>, en el distrito de San Salvador, Municipio de San Salvador Centro, 
-        Departamento de San Salvador, a los {hoy.day} días del mes de {meses[hoy.month-1]} del año {hoy.year}.
-        """
-        
-        elements.append(Paragraph(pie_fecha, legal_style))
-        elements.append(Spacer(1, 80))
-        
-        # Tabla de firma centrada y limpia [cite: 3]
-        firma_info = [
-            ["________________________"],
-            [f"{nombre_firmante_limpio}"],
-            [f"{datos_firmante['cargo']} | LENDER FINANZAS"]
-        ]
-        
-        t_firma = Table(firma_info, colWidths=[350])
-        t_firma.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 1), (0, 1), 'Helvetica-Bold')
-        ]))
-        elements.append(t_firma)
+            # Cuerpo del documento
+            cuerpo = f"""
+            {nombre_firmante_limpio}, mayor de edad, Abogado y Notario, de este domicilio, 
+            con Documento Único de Identidad número {datos_firmante['dui']}, en calidad de {datos_firmante['cargo']} 
+            de <b>LENDER FINANZAS</b>, hace constar que {tratamiento} <b>{persona.nombres} {persona.apellidos}</b>, 
+            identificado con su Documento Único de Identidad número <b>{persona.dui}</b>, ha cancelado la cantidad de 
+            <b>{monto_letras} (${credito.total_credito_proyectado:,.2f})</b>, correspondiente al crédito registrado 
+            bajo el código <b>{credito.credito_id}</b>.
+            """
+            
+            elements.append(Paragraph(cuerpo, legal_style))
+            elements.append(Spacer(1, 15))
 
-        # Construcción del PDF
-        doc.build(elements)
-        
-        # Gestión de archivos
-        nombre_archivo = f"finiquito_{credito.credito_id}_{hoy.strftime('%Y%m%d%H%M%S')}.pdf"
-        ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
-        
-        with open(ruta_archivo, 'wb') as f:
-            f.write(buffer.getvalue())
-        
-        # Subida a Google Cloud Storage
-        url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "finiquitos")
-        
-        # RETORNO DE VALORES (Evita el error NoneType) [cite: 5]
-        return ruta_archivo, nombre_archivo, url_publica
+            # Pie de fecha
+            hoy = datetime.datetime.now()
+            meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+            pie_fecha = f"""
+            Por tal razón se extiende el presente <b>FINIQUITO</b>, en el distrito de San Salvador, Municipio de San Salvador Centro, 
+            Departamento de San Salvador, a los {hoy.day} días del mes de {meses[hoy.month-1]} del año {hoy.year}.
+            """
+            
+            elements.append(Paragraph(pie_fecha, legal_style))
+            
+            # Espacio antes de la firma (reducido para compensar el tamaño de la imagen)
+            elements.append(Spacer(1, 45))
+            
+            # Lógica de la firma digital
+            if os.path.exists(ruta_firma):
+                img_firma = Image(ruta_firma, width=2.2*inch, height=0.8*inch)
+            else:
+                # Si no existe la imagen, ponemos un espacio en blanco para no romper la tabla
+                img_firma = Paragraph("", styles['Normal'])
+
+            # Tabla de firma estructurada
+            firma_info = [
+                [img_firma],                                     # Imagen de la firma
+                ["________________________"],                    # Línea
+                [f"{nombre_firmante_limpio}"],                    # Nombre
+                [f"{datos_firmante['cargo']} | LENDER FINANZAS"]  # Cargo
+            ]
+            
+            t_firma = Table(firma_info, colWidths=[350])
+            t_firma.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 2), (0, 2), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (0, 0), -12), # Acerca la imagen a la línea
+                ('TOPPADDING', (0, 1), (0, 1), 0),      # Elimina espacio superior de la línea
+                ('BOTTOMPADDING', (0, 1), (0, 1), 2),   # Espacio pequeño entre línea y nombre
+            ]))
+            elements.append(t_firma)
+
+            # Construcción del PDF
+            doc.build(elements)
+            
+            # Gestión de archivos y subida
+            nombre_archivo = f"finiquito_{credito.credito_id}_{hoy.strftime('%Y%m%d%H%M%S')}.pdf"
+            ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
+            
+            with open(ruta_archivo, 'wb') as f:
+                f.write(buffer.getvalue())
+            
+            url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "finiquitos")
+            
+            return ruta_archivo, nombre_archivo, url_publica
