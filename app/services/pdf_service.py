@@ -168,9 +168,8 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         {nombre_firmante_limpio}, mayor de edad, Abogado y Notario, de este domicilio, 
         con Documento Único de Identidad número {datos_firmante['dui']}, en calidad de {datos_firmante['cargo']} 
         de <b>LENDER FINANZAS</b>, hace constar que {tratamiento} <b>{persona.nombres} {persona.apellidos}</b>, 
-        identificado con su Documento Único de Identidad número <b>{persona.dui}</b>, ha cancelado la cantidad de 
-        <b>{monto_letras} (${credito.total_credito_proyectado:,.2f})</b>, correspondiente al crédito registrado 
-        bajo el código <b>{credito.credito_id}</b>.
+        identificado con su Documento Único de Identidad número <b>{persona.dui}</b> ha cancelado el crédito 
+        registrado bajo el código <b>{credito.credito_id}</b>.
         """
         
         elements.append(Paragraph(cuerpo, legal_style))
