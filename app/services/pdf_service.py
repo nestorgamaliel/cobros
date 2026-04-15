@@ -123,6 +123,8 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         # Asumimos que está en la misma carpeta que el logo
         ruta_firma = os.path.join(os.path.dirname(self.logo_path), "FirmaLegal.png")
 
+
+
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer, 
@@ -187,12 +189,13 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         # Espacio antes de la firma (reducido para compensar el tamaño de la imagen)
         elements.append(Spacer(1, 45))
         
-        # Lógica de la firma digital
         if os.path.exists(ruta_firma):
             img_firma = Image(ruta_firma, width=2.2*inch, height=0.8*inch)
+            logger.info("Firma cargada correctamente en el PDF.")
         else:
-            # Si no existe la imagen, ponemos un espacio en blanco para no romper la tabla
-            img_firma = Paragraph("", styles['Normal'])
+            img_firma = Image(ruta_firma, width=2.2*inch, height=0.8*inch)
+            logger.warning(f"ADVERTENCIA: No se encontró la firma en {ruta_firma}")
+
 
         # Tabla de firma estructurada
         firma_info = [
