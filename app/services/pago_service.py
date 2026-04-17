@@ -49,8 +49,8 @@ class ServicioPagos:
                 self.db.actualizar_url_pago(pago.pago_id, datos.credito_id, url_publica)
 
             logger.info(f"Pago {pago.pago_id} procesado exitosamente")
-            return ruta_local, nombre_archivo, url_publica
-            
+            return ruta_local, nombre_archivo, url_publica, pago, credito, persona
+
         except Exception as e:
             logger.error(f"Error crítico al registrar pago: {str(e)}")
             return None, f"Error: {str(e)}", None

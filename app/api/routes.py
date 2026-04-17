@@ -125,17 +125,11 @@ def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_v
             
             # 1. Registramos el pago y generamos el PDF
             # (Asumimos que tu servicio de pago devuelve estos datos)
-            ruta, nombre, url = servicio_pagos.registrar_pago(datos_validados)
+            ruta, nombre, url, pago_obj, credito_obj, persona_obj = servicio_pagos.registrar_pago(datos_validados)            
             
             if not ruta:
                 return jsonify({'error': nombre}), 400
 
-            # 2. Obtener datos para el SMS
-            # Buscamos los objetos para pasárselos al NotificacionService
-            pago_obj = servicio_pagos.obtener_pago_por_id(datos_validados.pago_id) # O como lo tengas en tu DB
-            credito_obj = servicio_creditos.obtener_credito_por_id(datos_validados.credito_id)
-            persona_obj = servicio_personas.obtener_persona_por_id(credito_obj.persona_id)
-            
             # 3. Generar el texto usando el método estático (como el static de Java)
             texto_sms = NotificacionService.generar_texto_recibo(
                 pago_obj, 
