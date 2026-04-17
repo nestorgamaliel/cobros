@@ -3,6 +3,7 @@ import os
 from flask import Blueprint, request, jsonify, send_file
 from app.utils.logger import setup_logger
 from config import settings
+from app.services.notificacion_service import NotificacionService
 
 # Importación de DTOs para validación
 from app.schemas.persona import PersonaCreate, PersonaUpdate
@@ -117,24 +118,42 @@ def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_v
             return jsonify({'error': f"Datos inválidos: {str(e)}"}), 400
 
     # --- RUTAS DE PAGOS ---
-
     @api_blueprint.route('/pago', methods=['POST'])
     def registrar_pago():
         try:
             datos_validados = PagoCreate(**request.get_json())
+            
+            # 1. Registramos el pago y generamos el PDF
+            # (Asumimos que tu servicio de pago devuelve estos datos)
             ruta, nombre, url = servicio_pagos.registrar_pago(datos_validados)
             
             if not ruta:
                 return jsonify({'error': nombre}), 400
+
+            # 2. Obtener datos para el SMS
+            # Buscamos los objetos para pasárselos al NotificacionService
+            pago_obj = servicio_pagos.obtener_pago_por_id(datos_validados.pago_id) # O como lo tengas en tu DB
+            credito_obj = servicio_creditos.obtener_credito_por_id(datos_validados.credito_id)
+            persona_obj = servicio_personas.obtener_persona_por_id(credito_obj.persona_id)
+            
+            # 3. Generar el texto usando el método estático (como el static de Java)
+            texto_sms = NotificacionService.generar_texto_recibo(
+                pago_obj, 
+                credito_obj, 
+                persona_obj
+            )
                 
             return jsonify({
                 'mensaje': 'Pago procesado exitosamente',
                 'url_recibo': url,
-                'nombre_archivo': nombre
+                'nombre_archivo': nombre,
+                'sms_copy_paste': texto_sms  # <--- Aquí verás el texto en Postman
             }), 201
+
         except Exception as e:
             logger.error(f"Error en POST /pago: {str(e)}")
             return jsonify({'error': f"Error en procesamiento de pago: {str(e)}"}), 400
+        
 
     @api_blueprint.route('/recibo/<nombre_recibo>', methods=['GET'])
     def obtener_recibo(nombre_recibo):
