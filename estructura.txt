@@ -1,6 +1,3 @@
-tree -I 'source|bin|venv|*pycache*' > estructura.txt
------------------------------------------------------
-
 .
 ├── Diagrama_Despliegue.png
 ├── Dockerfile
@@ -18,6 +15,7 @@ tree -I 'source|bin|venv|*pycache*' > estructura.txt
 │   │   └── models.py
 │   ├── schemas
 │   │   ├── __init__.py
+│   │   ├── base.py
 │   │   ├── credito.py
 │   │   ├── pago.py
 │   │   └── persona.py
@@ -25,6 +23,8 @@ tree -I 'source|bin|venv|*pycache*' > estructura.txt
 │   │   ├── __init__.py
 │   │   ├── credito_service.py
 │   │   ├── db_service.py
+│   │   ├── finiquito_service.py
+│   │   ├── notificacion_service.py
 │   │   ├── pago_service.py
 │   │   ├── pdf_service.py
 │   │   ├── persona_service.py
@@ -32,6 +32,7 @@ tree -I 'source|bin|venv|*pycache*' > estructura.txt
 │   │   └── whatsapp_service.py
 │   └── utils
 │       ├── __init__.py
+│       ├── formatters.py
 │       ├── gcs_uploader.py
 │       └── logger.py
 ├── config.py
@@ -40,22 +41,27 @@ tree -I 'source|bin|venv|*pycache*' > estructura.txt
 ├── env.yaml
 ├── estructura.txt
 ├── instrucciones.txt
+├── llaves.txt
 ├── migrations
 │   ├── README
 │   ├── env.py
 │   ├── script.py.mako
 │   └── versions
+│       ├── 14713cbb8ef7_crear_tabla_credito_finiquito.py
 │       ├── 1deaf26c981a_refactor_credito_cancelado.py
+│       ├── 53c83dd8e0e0_agregar_columna_monto_cancelado_a_.py
 │       ├── 5a1dbc921fa4_check.py
 │       ├── 5d5b5a653ffc_boolean.py
 │       ├── 6998ebe3ca93_renombrar_comisiones_a_credito_.py
 │       ├── 6a40ebc5087f_prueba_conexion.py
-│       └── b55e1cdc9872_refactor_total_a_integer_y_comisiones.py
+│       ├── b55e1cdc9872_refactor_total_a_integer_y_comisiones.py
+│       └── d52d2ddf963c_agregar_columna_monto_cancelado_a_.py
 ├── recibos
 ├── recursos
+│   ├── FirmaLegal.png
 │   └── Lender_logo.jpg
 ├── requirements.txt
 ├── run.py
 └── wsgi.py
 
-11 directories, 45 files
+11 directories, 54 files

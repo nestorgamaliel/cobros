@@ -255,3 +255,7 @@ https://cobros-608132114325.us-central1.run.app/api/personas/buscar?dui=01487376
 
 # Finiquito
 POST /api/credito/<int:credito_id>/generar-finiquito
+
+# Estructura
+tree -I 'source|bin|venv|*pycache*' > estructura.txt
+

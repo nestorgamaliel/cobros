@@ -35,3 +35,7 @@ logs/
 build/
 dist/
 *.egg-info/
+
+
+# Llaves
+llaves.txt

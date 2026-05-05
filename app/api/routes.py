@@ -15,7 +15,7 @@ from app.services.whatsapp_service import WhatsAppService, TwilioProvider
 
 logger = setup_logger(__name__)
 
-def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_vendedores, servicio_finiquitos):
+def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_vendedores, servicio_finiquitos, servicio_estado_cuenta):
     """
     Inyecta los servicios y registra las rutas dentro de un Blueprint.
     Al definir las funciones aquí, los servicios nunca serán None.
@@ -45,7 +45,6 @@ def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_v
         logger.warning("WhatsApp no configurado: Faltan credenciales")
 
     # --- RUTAS DE PERSONAS ---
-
     @api_blueprint.route('/persona', methods=['POST'])
     def crear_persona():
         try:
@@ -99,7 +98,6 @@ def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_v
             return jsonify({'error': 'Error interno al procesar la búsqueda'}), 500
 
     # --- RUTAS DE CRÉDITOS ---
-
     @api_blueprint.route('/credito', methods=['POST'])
     def crear_credito():
         try:
@@ -175,10 +173,36 @@ def init_routes(servicio_pagos, servicio_personas, servicio_creditos, servicio_v
         except Exception as e:
             logger.error(f"Error en POST /generar-finiquito: {str(e)}")
             return jsonify({'error': f"Error al procesar finiquito: {str(e)}"}), 500
+        
+
+    # NUEVA RUTA PARA ESTADO DE CUENTA
+    @api_blueprint.route('/credito/<int:credito_id>/estado-cuenta', methods=['GET'])
+    def generar_estado_cuenta(credito_id):
+        """
+        Genera y devuelve la URL del PDF del estado de cuenta detallado.
+        """
+        try:
+            logger.info(f"Generando estado de cuenta para crédito ID: {credito_id}")
+            
+            # Llamamos al método que creamos en el Paso 2
+            url, error = servicio_estado_cuenta.generar_estado_cuenta_completo(credito_id)
+            
+            if error:
+                return jsonify({'error': error}), 400
+                
+            return jsonify({
+                'mensaje': 'Estado de cuenta generado exitosamente',
+                'url_pdf': url,
+                'credito_id': credito_id
+            }), 200
+            
+        except Exception as e:
+            logger.error(f"Error en GET /credito/{credito_id}/estado-cuenta: {str(e)}")
+            return jsonify({'error': 'Error interno al generar el documento'}), 500
+        
 
 
     # --- REPORTES ---
-
     @api_blueprint.route('/cron/reporte-diario', methods=['POST'])
     def ejecutar_reporte_diario():
         try:

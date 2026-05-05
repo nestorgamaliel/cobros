@@ -3,6 +3,7 @@ import os
 from flask import Flask
 from config import settings
 from app.utils.logger import setup_logger
+from .estado_cuenta_service import EstadoCuentaService
 
 # Configurar logger global
 logger = setup_logger(__name__)
@@ -14,15 +15,17 @@ pago_service = None
 persona_service = None
 credito_service = None
 vendedor_service = None
+estado_cuenta_service = None
+finiquito_service = None
 
 def inicializar_servicios():
     """Inicializa los servicios centralizados inyectando dependencias."""
-    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service
+    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, estado_cuenta_service
     
     try:
         from app.services import (
             BaseDatos, GeneradorRecibos, ServicioPagos, 
-            ServicioPersonas, ServicioCreditos, ServicioVendedores
+            ServicioPersonas, ServicioCreditos, ServicioVendedores, ServicioVendedores
         )
 
         # 1. Base de Datos y PDF (Dependencias base)
@@ -35,9 +38,13 @@ def inicializar_servicios():
         credito_service = ServicioCreditos(db_service)    
         vendedor_service = ServicioVendedores(db_service)
         
+        # --- INSTANCIAR EL NUEVO SERVICIO ---
+        estado_cuenta_service = EstadoCuentaService(db_service)
+
         # 3. PagoService requiere db y pdf
         pago_service = ServicioPagos(db_service, pdf_service)
-        
+
+
         logger.info("Servicios del sistema cargados correctamente")
         return True
         
@@ -66,12 +73,14 @@ def create_app(test_config=None):
     from app.api.routes import init_routes
     
     # Validamos que los servicios existan antes de pasarlos
-    if all([pago_service, persona_service, credito_service, vendedor_service]):
+    if all([pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service]):
         api_bp = init_routes(
             pago_service, 
             persona_service, 
             credito_service, 
-            vendedor_service
+            vendedor_service,
+            finiquito_service,
+            estado_cuenta_service             
         )
         app.register_blueprint(api_bp, url_prefix='/api')
         logger.info("Blueprints registrados exitosamente")
