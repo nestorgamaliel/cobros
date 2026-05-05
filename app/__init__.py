@@ -64,7 +64,7 @@ def create_app(test_config=None):
 
 def inicializar_servicios():
     """Inicializa los servicios centralizados inyectando las dependencias necesarias."""
-    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, finiquito_service
+    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service
     
     try:
         # Importaciones tardías para evitar dependencias circulares
