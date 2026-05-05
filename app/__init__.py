@@ -15,7 +15,8 @@ pago_service = None
 persona_service = None
 credito_service = None
 vendedor_service = None
-finiquito_service = None # Nuevo servicio
+finiquito_service = None 
+estado_cuenta_service = None
 
 def create_app(test_config=None):
     """Factory para crear y configurar la aplicación Flask."""
@@ -43,7 +44,8 @@ def create_app(test_config=None):
             persona_service, 
             credito_service, 
             vendedor_service, 
-            finiquito_service # Nueva inyección
+            finiquito_service,
+            estado_cuenta_service
         ),
         url_prefix='/api'
     )
@@ -73,6 +75,7 @@ def inicializar_servicios():
         from app.services.credito_service import ServicioCreditos
         from app.services.vendedor_service import ServicioVendedores
         from app.services.finiquito_service import FiniquitoService # Nueva importación
+        from app.services.estado_cuenta_service import EstadoCuentaService
 
         # 1. Servicios base
         db_service = BaseDatos(settings.SQLALCHEMY_DATABASE_URI)
@@ -83,9 +86,8 @@ def inicializar_servicios():
         persona_service = ServicioPersonas(db_service)
         credito_service = ServicioCreditos(db_service)    
         vendedor_service = ServicioVendedores(db_service)
-        
-        # Inicializamos el nuevo servicio de finiquitos
         finiquito_service = FiniquitoService(db_service)
+        estado_cuenta_service = EstadoCuentaService(db_service)
         
         logger.info("Todos los servicios del sistema (incluyendo Finiquitos) han sido cargados")
         
@@ -101,3 +103,4 @@ def get_persona_service(): return persona_service
 def get_vendedor_service(): return vendedor_service
 def get_credito_service(): return credito_service
 def get_finiquito_service(): return finiquito_service
+def get_estado_cuenta_service(): return estado_cuenta_service
