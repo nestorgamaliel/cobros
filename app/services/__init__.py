@@ -20,12 +20,15 @@ finiquito_service = None
 
 def inicializar_servicios():
     """Inicializa los servicios centralizados inyectando dependencias."""
-    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, estado_cuenta_service
+    # Agregamos TODAS las globales necesarias
+    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, estado_cuenta_service, finiquito_service
     
     try:
+        # Importamos las clases (Asegúrate que ServicioFiniquitos esté disponible)
         from app.services import (
             BaseDatos, GeneradorRecibos, ServicioPagos, 
-            ServicioPersonas, ServicioCreditos, ServicioVendedores, ServicioVendedores
+            ServicioPersonas, ServicioCreditos, ServicioVendedores,
+            ServicioFiniquitos 
         )
 
         # 1. Base de Datos y PDF (Dependencias base)
@@ -38,14 +41,14 @@ def inicializar_servicios():
         credito_service = ServicioCreditos(db_service)    
         vendedor_service = ServicioVendedores(db_service)
         
-        # --- INSTANCIAR EL NUEVO SERVICIO ---
+        # 3. NUEVOS SERVICIOS (Instanciación correcta)
         estado_cuenta_service = EstadoCuentaService(db_service)
+        finiquito_service = ServicioFiniquitos(db_service) # <--- ESTO FALTABA
 
-        # 3. PagoService requiere db y pdf
+        # 4. PagoService requiere db y pdf
         pago_service = ServicioPagos(db_service, pdf_service)
 
-
-        logger.info("Servicios del sistema cargados correctamente")
+        logger.info("Todos los servicios han sido cargados correctamente")
         return True
         
     except Exception as e:
