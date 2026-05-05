@@ -72,20 +72,31 @@ def create_app(test_config=None):
     # Importamos aquí para evitar importaciones circulares
     from app.api.routes import init_routes
     
-    # Validamos que los servicios existan antes de pasarlos
-    if all([pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service]):
+    # Valida que los 6 servicios existan
+    servicios_check = [
+        pago_service, 
+        persona_service, 
+        credito_service, 
+        vendedor_service, 
+        finiquito_service, 
+        estado_cuenta_service
+    ]
+
+    if all(servicios_check):
         api_bp = init_routes(
             pago_service, 
             persona_service, 
             credito_service, 
             vendedor_service,
-            finiquito_service,
-            estado_cuenta_service             
+            finiquito_service,     # Argumento 5
+            estado_cuenta_service  # <--- ¡ESTE ES EL QUE FALTA EN TU LLAMADA!
         )
         app.register_blueprint(api_bp, url_prefix='/api')
         logger.info("Blueprints registrados exitosamente")
     else:
-        logger.error("No se pudieron registrar las rutas: Algunos servicios son None")
+        logger.error("No se pudieron registrar las rutas: Faltan servicios")
+
+        
 
     @app.route('/')
     def index():
