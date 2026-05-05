@@ -65,17 +65,18 @@ def create_app(test_config=None):
     else:
         app.config.from_object(settings)
     
-    # 2. Preparar entorno (carpetas, etc.)
+    # 2. Preparar entorno
     settings.init_app(app)
     
-    # 3. Arrancar servicios ANTES que las rutas
+    # 3. Arrancar servicios
     inicializar_servicios()
     
-    # 4. Registrar Blueprints con inyección manual
-    # Importamos aquí para evitar importaciones circulares
+    # --- CAMBIO AQUÍ: Importamos init_routes ---
     from app.api.routes import init_routes
     
-    # Valida que los 6 servicios existan
+    # --- CAMBIO AQUÍ: Forzamos el uso de las globales actualizadas ---
+    global pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service
+
     servicios_check = [
         pago_service, 
         persona_service, 
@@ -85,20 +86,31 @@ def create_app(test_config=None):
         estado_cuenta_service
     ]
 
+    # Debug log para ver qué está llegando realmente a Cloud Run
+    logger.info(f"Verificando servicios para rutas: {[s is not None for s in servicios_check]}")
+
     if all(servicios_check):
+        # Esta llamada DEBE tener los 6 argumentos y las variables DEBEN estar cargadas
         api_bp = init_routes(
             pago_service, 
             persona_service, 
             credito_service, 
             vendedor_service,
-            finiquito_service,     # Argumento 5
-            estado_cuenta_service  # <--- ¡ESTE ES EL QUE FALTA EN TU LLAMADA!
+            finiquito_service,     
+            estado_cuenta_service  
         )
         app.register_blueprint(api_bp, url_prefix='/api')
         logger.info("Blueprints registrados exitosamente")
     else:
-        logger.error("No se pudieron registrar las rutas: Faltan servicios")
-
+        # Esto te dirá exactamente cuál es None en los logs de Cloud Run
+        missing = []
+        if not pago_service: missing.append("pago")
+        if not persona_service: missing.append("persona")
+        if not credito_service: missing.append("credito")
+        if not vendedor_service: missing.append("vendedor")
+        if not finiquito_service: missing.append("finiquito")
+        if not estado_cuenta_service: missing.append("estado_cuenta")
+        logger.error(f"No se pudieron registrar las rutas. Servicios faltantes: {missing}")
         
 
     @app.route('/')
