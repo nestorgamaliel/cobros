@@ -255,7 +255,7 @@ class GeneradorEstadosCuenta(GeneradorDocumentos):
         info_data = [
             [f"CLIENTE: {persona.nombres} {persona.apellidos}", f"FECHA EMISIÓN: {fecha_emision}"],
             [f"FECHA DEL CRÉDITO: {credito.fecha.strftime('%d/%m/%Y')}", f"MONTO PROYECTADO: ${credito.total_credito_proyectado:,.2f}"],
-            [f"MONTO OTORGADO: ${credito.monto_otorgado:,.2f}", f"CUOTA: ${credito.cuota:,.2f}"],
+            [f"MONTO COLOCADO: ${credito.monto_colocado:,.2f}", f"CUOTA: ${credito.cuota:,.2f}"],
             [f"NÚMERO DE CUOTAS: {credito.numero_cuotas}", f"DÍA DE PAGO: {credito.dia_pago}"],
             [f"MONTO COMISIONES: ${comisiones_totales:,.2f}", f"DUI: {persona.dui}"]
         ]
