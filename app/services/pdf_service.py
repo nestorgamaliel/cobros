@@ -227,13 +227,11 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "finiquitos")
         
         return ruta_archivo, nombre_archivo, url_publica    
-
 class GeneradorEstadosCuenta(GeneradorDocumentos):
-    """Especializada en generar estados de cuenta detallados sin saldo por fila."""
+    """Especializada en generar estados de cuenta detallados para Lender Finanzas."""
 
     def generar_estado_cuenta_pdf(self, persona, credito, pagos):
         buffer = BytesIO()
-        # Márgenes estándar para un documento profesional
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
         styles = getSampleStyleSheet()
         
@@ -247,83 +245,86 @@ class GeneradorEstadosCuenta(GeneradorDocumentos):
         elements.append(Paragraph("<b>ESTADO DE CUENTA DETALLADO</b>", styles['Title']))
         elements.append(Spacer(1, 15))
 
-        # 2. Encabezado de Datos (Cliente y Crédito)
+        # 2. Encabezado de Datos
         fecha_emision = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+        
+        # Cálculo de comisiones totales
+        comisiones_totales = float(getattr(credito, 'comision_asistencia_financiera', 0) + 
+                                   getattr(credito, 'comision_administrativa', 0))
+        
         info_data = [
             [f"CLIENTE: {persona.nombres} {persona.apellidos}", f"FECHA EMISIÓN: {fecha_emision}"],
-            [f"CRÉDITO #: {credito.credito_id}", f"DUI: {persona.dui}"],
-            [f"MONTO ORIGINAL: ${credito.total_credito_proyectado:,.2f}", f"CUOTA: ${credito.cuota:,.2f}"]
+            [f"FECHA DEL CRÉDITO: {credito.fecha.strftime('%d/%m/%Y')}", f"MONTO PROYECTADO: ${credito.total_credito_proyectado:,.2f}"],
+            [f"MONTO OTORGADO: ${credito.monto_otorgado:,.2f}", f"CUOTA: ${credito.cuota:,.2f}"],
+            [f"NÚMERO DE CUOTAS: {credito.numero_cuotas}", f"DÍA DE PAGO: {credito.dia_pago}"],
+            [f"MONTO COMISIONES: ${comisiones_totales:,.2f}", f"DUI: {persona.dui}"]
         ]
+        
         t_info = Table(info_data, colWidths=[3.5*inch, 3.5*inch])
         t_info.setStyle(TableStyle([
             ('FONTNAME', (0,0), (-1,-1), 'Helvetica'), 
-            ('FONTSIZE', (0,0), (-1,-1), 10)
+            ('FONTSIZE', (0,0), (-1,-1), 9),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2)
         ]))
         elements.append(t_info)
         elements.append(Spacer(1, 20))
         
-        # 3. Tabla de Movimientos (Sin columna de Saldo)
-        # Encabezados ajustados
-        tabla_data = [["FECHA", "DESCRIPCIÓN", "CARGOS", "ABONOS"]]
+        # 3. Tabla de Movimientos
+        # Nueva estructura: FECHA, DESCRIPCIÓN, MONTO, EXTEMPORÁNEO
+        tabla_data = [["FECHA", "DESCRIPCIÓN", "MONTO", "EXTEMPORÁNEO"]]
         
-        # Fila de Saldo Inicial (Cargo inicial)
-        monto_inicial = float(credito.total_credito_proyectado)
-        tabla_data.append([
-            credito.fecha.strftime("%d/%m/%Y") if credito.fecha else "-",
-            "DESEMBOLSO / MONTO PROYECTADO",
-            f"${monto_inicial:,.2f}",
-            "-"
-        ])
-
-        # Cuerpo: Listado de Pagos realizados
-        total_abonos = 0
+        # Cuerpo: Listado de Pagos realizados (Sin fila de desembolso)
+        total_pagado = 0
         for p in pagos:
             monto_pago = float(p.monto)
-            total_abonos += monto_pago
+            monto_extemporaneo = float(getattr(p, 'extemporaneo', 0))
+            total_pagado += (monto_pago + monto_extemporaneo)
+            
             tabla_data.append([
                 p.fecha.strftime("%d/%m/%Y"),
                 f"PAGO RECIBO #{p.pago_id}",
-                "-",
-                f"${monto_pago:,.2f}"
+                f"${monto_pago:,.2f}",
+                f"${monto_extemporaneo:,.2f}"
             ])
 
-        # Estilos de la tabla: Más espacio a la descripción al quitar 'Saldo'
-        # Anchos: Fecha(1.0), Descripción(3.6), Cargos(1.2), Abonos(1.2) = 7.0 pulgadas aprox.
-        t_movs = Table(tabla_data, colWidths=[1.0*inch, 3.6*inch, 1.2*inch, 1.2*inch])
+        # Configuración de anchos: Fecha(1.0), Descripción(3.0), Monto(1.5), Extemporáneo(1.5)
+        t_movs = Table(tabla_data, colWidths=[1.0*inch, 3.0*inch, 1.5*inch, 1.5*inch])
         t_movs.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2C3E50')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ALIGN', (2, 1), (-1, -1), 'RIGHT'), # Montos de dinero a la derecha
+            ('ALIGN', (2, 1), (-1, -1), 'RIGHT'), # Monto a la derecha
+            ('ALIGN', (3, 1), (-1, -1), 'RIGHT'), # Extemporáneo a la derecha
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         elements.append(t_movs)
 
-        # 4. Resumen Final (Opcional, pero da cierre profesional)
+        # 4. Resumen Final
         elements.append(Spacer(1, 15))
-        saldo_final = max(monto_inicial - total_abonos, 0)
+        monto_inicial = float(credito.total_credito_proyectado)
+        # El saldo restante suele ser sobre el proyectado original menos lo abonado a capital/cuota
+        saldo_final = max(monto_inicial - total_pagado, 0)
+        
         resumen_data = [
-            ["", "TOTAL ABONADO:", f"${total_abonos:,.2f}"],
-            ["", "SALDO ACTUAL:", f"${saldo_final:,.2f}"]
+            ["", "TOTAL RECIBIDO:", f"${total_pagado:,.2f}"],
+            ["", "SALDO PENDIENTE:", f"${saldo_final:,.2f}"]
         ]
-        t_resumen = Table(resumen_data, colWidths=[4.6*inch, 1.2*inch, 1.2*inch])
+        t_resumen = Table(resumen_data, colWidths=[4.0*inch, 1.5*inch, 1.5*inch])
         t_resumen.setStyle(TableStyle([
             ('ALIGN', (1, 0), (2, -1), 'RIGHT'),
-            ('FONTNAME', (1, 1), (2, 1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (2, -1), 'Helvetica-Bold'),
         ]))
         elements.append(t_resumen)
 
-        # 5. Construcción y Subida
+        # 5. Construcción y Guardado
         doc.build(elements)
         nombre_archivo = f"estado_cuenta_{credito.credito_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M')}.pdf"
-        # Usamos el directorio de salida configurado (recibos o una carpeta nueva)
         ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
         
         with open(ruta_archivo, 'wb') as f:
             f.write(buffer.getvalue())
         
-        # Subimos a la carpeta específica en GCS
         url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "estados_cuenta")
         return ruta_archivo, nombre_archivo, url_publica
