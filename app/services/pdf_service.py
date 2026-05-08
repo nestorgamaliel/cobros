@@ -227,6 +227,8 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "finiquitos")
         
         return ruta_archivo, nombre_archivo, url_publica    
+    
+
 class GeneradorEstadosCuenta(GeneradorDocumentos):
     """Especializada en generar estados de cuenta detallados para Lender Finanzas."""
 
@@ -243,19 +245,18 @@ class GeneradorEstadosCuenta(GeneradorDocumentos):
             elements.append(logo)
         
         elements.append(Paragraph("<b>ESTADO DE CUENTA DETALLADO</b>", styles['Title']))
-        elements.append(Spacer(1, 15))
+        elements.append(Spacer(1, 10))
 
-        # 2. Encabezado de Datos
+        # 2. Encabezado de Datos (Incluyendo IDs y Comisiones sumadas)
         fecha_emision = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
-        
-        # Cálculo de comisiones totales
         comisiones_totales = float(getattr(credito, 'comision_asistencia_financiera', 0) + 
                                    getattr(credito, 'comision_administrativa', 0))
         
         info_data = [
+            [f"ID PERSONA: {persona.persona_id}", f"ID CRÉDITO: {credito.credito_id}"],
             [f"CLIENTE: {persona.nombres} {persona.apellidos}", f"FECHA EMISIÓN: {fecha_emision}"],
-            [f"FECHA DEL CRÉDITO: {credito.fecha.strftime('%d/%m/%Y')}", f"MONTO PROYECTADO: ${credito.total_credito_proyectado:,.2f}"],
-            [f"MONTO COLOCADO: ${credito.monto_colocado:,.2f}", f"CUOTA: ${credito.cuota:,.2f}"],
+            [f"FECHA DEL CRÉDITO: {credito.fecha.strftime('%d/%m/%Y') if credito.fecha else '-'}", f"MONTO PROYECTADO: ${credito.total_credito_proyectado:,.2f}"],
+            [f"MONTO OTORGADO: ${credito.monto_otorgado:,.2f}", f"CUOTA: ${credito.cuota:,.2f}"],
             [f"NÚMERO DE CUOTAS: {credito.numero_cuotas}", f"DÍA DE PAGO: {credito.dia_pago}"],
             [f"MONTO COMISIONES: ${comisiones_totales:,.2f}", f"DUI: {persona.dui}"]
         ]
@@ -264,30 +265,32 @@ class GeneradorEstadosCuenta(GeneradorDocumentos):
         t_info.setStyle(TableStyle([
             ('FONTNAME', (0,0), (-1,-1), 'Helvetica'), 
             ('FONTSIZE', (0,0), (-1,-1), 9),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 2)
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+            ('FONTNAME', (0,0), (1,0), 'Helvetica-Bold'), # Resaltar la fila de IDs
         ]))
         elements.append(t_info)
         elements.append(Spacer(1, 20))
         
         # 3. Tabla de Movimientos
-        # Nueva estructura: FECHA, DESCRIPCIÓN, MONTO, EXTEMPORÁNEO
+        # Estructura requerida: FECHA, DESCRIPCIÓN, MONTO, EXTEMPORÁNEO (multa + intereses)
         tabla_data = [["FECHA", "DESCRIPCIÓN", "MONTO", "EXTEMPORÁNEO"]]
         
-        # Cuerpo: Listado de Pagos realizados (Sin fila de desembolso)
-        total_pagado = 0
+        total_recibido_acumulado = 0
         for p in pagos:
             monto_pago = float(p.monto)
-            monto_extemporaneo = float(getattr(p, 'extemporaneo', 0))
-            total_pagado += (monto_pago + monto_extemporaneo)
+            # Suma explícita de los campos solicitados
+            valor_extemporaneo = float(getattr(p, 'multa', 0) + getattr(p, 'intereses', 0))
+            
+            total_recibido_acumulado += (monto_pago + valor_extemporaneo)
             
             tabla_data.append([
-                p.fecha.strftime("%d/%m/%Y"),
+                p.fecha.strftime("%d/%m/%Y") if p.fecha else "-",
                 f"PAGO RECIBO #{p.pago_id}",
                 f"${monto_pago:,.2f}",
-                f"${monto_extemporaneo:,.2f}"
+                f"${valor_extemporaneo:,.2f}"
             ])
 
-        # Configuración de anchos: Fecha(1.0), Descripción(3.0), Monto(1.5), Extemporáneo(1.5)
+        # Configuración de anchos para las 4 columnas
         t_movs = Table(tabla_data, colWidths=[1.0*inch, 3.0*inch, 1.5*inch, 1.5*inch])
         t_movs.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2C3E50')),
@@ -303,13 +306,12 @@ class GeneradorEstadosCuenta(GeneradorDocumentos):
 
         # 4. Resumen Final
         elements.append(Spacer(1, 15))
-        monto_inicial = float(credito.total_credito_proyectado)
-        # El saldo restante suele ser sobre el proyectado original menos lo abonado a capital/cuota
-        saldo_final = max(monto_inicial - total_pagado, 0)
+        monto_proyectado = float(credito.total_credito_proyectado)
+        saldo_pendiente = max(monto_proyectado - total_recibido_acumulado, 0)
         
         resumen_data = [
-            ["", "TOTAL RECIBIDO:", f"${total_pagado:,.2f}"],
-            ["", "SALDO PENDIENTE:", f"${saldo_final:,.2f}"]
+            ["", "TOTAL RECIBIDO:", f"${total_recibido_acumulado:,.2f}"],
+            ["", "SALDO PENDIENTE:", f"${saldo_pendiente:,.2f}"]
         ]
         t_resumen = Table(resumen_data, colWidths=[4.0*inch, 1.5*inch, 1.5*inch])
         t_resumen.setStyle(TableStyle([
