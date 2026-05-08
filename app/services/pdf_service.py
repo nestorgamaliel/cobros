@@ -9,7 +9,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_JUSTIFY
 from num2words import num2words 
-
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, HRFlowable
 from app.utils.logger import setup_logger
 from app.utils.gcs_uploader import subir_archivo_a_gcs
 from config import settings
