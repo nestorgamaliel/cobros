@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 from flask import Flask
+from flask_cors import CORS
 # Importamos settings y logger primero para asegurar que la config sea válida
 from config import settings
 from app.utils.logger import setup_logger
@@ -21,6 +22,8 @@ estado_cuenta_service = None
 def create_app(test_config=None):
     """Factory para crear y configurar la aplicación Flask."""
     app = Flask(__name__, instance_relative_config=True)
+    CORS(app)
+
     
     # 1. Cargar configuración desde el objeto Pydantic
     if test_config is None:
