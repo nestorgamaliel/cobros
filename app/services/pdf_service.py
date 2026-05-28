@@ -112,7 +112,7 @@ class GeneradorRecibos(GeneradorDocumentos):
         elements.append(t_pago)
         elements.append(Spacer(1, 40))
         
-        elements.append(Table([["________________________"], ["{config['firmante_nombre']} | {config['firmante_cargo']}"]], colWidths=[450], style=[('ALIGN', (0,0), (-1,-1), 'CENTER')]))
+        elements.append(Table([["________________________"], [f"{config['firmante_nombre']} | {config['firmante_cargo']}"]], colWidths=[450], style=[('ALIGN', (0,0), (-1,-1), 'CENTER')]))
         
         doc.build(elements)
         nombre_archivo = f"recibo_pago_{pago.pago_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
