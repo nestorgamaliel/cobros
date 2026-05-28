@@ -41,12 +41,30 @@ class GeneradorDocumentos:
         centavos = int(round((monto - enteros) * 100))
         letras = num2words(enteros, lang='es').upper()
         return f"{letras} {centavos:02d}/100 DÓLARES DE LOS ESTADOS UNIDOS DE AMÉRICA"
+    
+    def obtener_configuracion_sucursal(self, privado):
+            """Devuelve el logo y el firmante según el tipo de crédito."""
+            if privado == 2:
+                return {
+                    "logo": os.path.join(os.path.dirname(self.logo_path), "Logo_chalchuapa.png"),
+                    "firmante_nombre": "Jazmin Hernandez",
+                    "firmante_cargo": "Gerente Operaciones"
+                }
+            # Configuración por defecto
+            return {
+                "logo": self.logo_path,
+                "firmante_nombre": "Evelyn García",
+                "firmante_cargo": "Gerente Operaciones"
+            }
+
 
 
 class GeneradorRecibos(GeneradorDocumentos):
     """Especializada en generar recibos de pago."""
     
     def generar_recibo_pdf(self, pago, credito, persona, datos_adicionales=None):
+        config = self.obtener_configuracion_sucursal(credito.privado)
+
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
         styles = getSampleStyleSheet()
@@ -54,8 +72,8 @@ class GeneradorRecibos(GeneradorDocumentos):
         right_style = ParagraphStyle('RightStyle', parent=styles['Normal'], alignment=TA_RIGHT)
         elements = []
         
-        if os.path.exists(self.logo_path):
-            logo = Image(self.logo_path, width=2.5*inch, height=1*inch)
+        if os.path.exists(config["logo"]):
+            logo = Image(config["logo"], width=2.5*inch, height=1*inch)
             elements.append(logo)
         
         elements.append(Paragraph(f"<b>RECIBO DE PAGO #{pago.pago_id}</b>", styles['Title']))
@@ -94,7 +112,7 @@ class GeneradorRecibos(GeneradorDocumentos):
         elements.append(t_pago)
         elements.append(Spacer(1, 40))
         
-        elements.append(Table([["________________________"], ["Evelyn García | Gerente Operaciones"]], colWidths=[450], style=[('ALIGN', (0,0), (-1,-1), 'CENTER')]))
+        elements.append(Table([["________________________"], ["{config['firmante_nombre']} | {config['firmante_cargo']}"]], colWidths=[450], style=[('ALIGN', (0,0), (-1,-1), 'CENTER')]))
         
         doc.build(elements)
         nombre_archivo = f"recibo_pago_{pago.pago_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
@@ -111,17 +129,18 @@ class GeneradorFiniquitos(GeneradorDocumentos):
     """Especializada en generar finiquitos legales para Lender Finanzas."""
 
     def generar_finiquito_pdf(self, persona, credito, datos_firmante=None):
+        config = self.obtener_configuracion_sucursal(credito.privado)
         """Genera el PDF legal del finiquito con firma digital, lo guarda localmente y lo sube a GCS."""
         if datos_firmante is None:
             datos_firmante = {
-                "nombre": "EVELYN YANETH GARCIA BAIRES",
-                "cargo": "Gerente Legal",
+                "nombre": "{config['firmante_nombre']}",
+                "cargo": "{config['firmante_cargo']}",
                 "dui": "02248960-2"
             }
 
         # Configuración de la firma (ajusta la ruta según tu estructura de carpetas)
         # Asumimos que está en la misma carpeta que el logo
-        ruta_firma = os.path.join(os.path.dirname(self.logo_path), "FirmaLegal.png")
+        ruta_firma = os.path.join(os.path.dirname(config["logo"]), "FirmaLegal.png")
 
 
 
