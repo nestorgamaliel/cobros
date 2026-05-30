@@ -124,25 +124,23 @@ class GeneradorRecibos(GeneradorDocumentos):
         url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "recibos")
         return ruta_archivo, nombre_archivo, url_publica
 
-
 class GeneradorFiniquitos(GeneradorDocumentos):
     """Especializada en generar finiquitos legales para Lender Finanzas."""
 
     def generar_finiquito_pdf(self, persona, credito, datos_firmante=None):
         config = self.obtener_configuracion_sucursal(credito.privado)
         """Genera el PDF legal del finiquito con firma digital, lo guarda localmente y lo sube a GCS."""
+        
         if datos_firmante is None:
+            # CORRECCIÓN: La 'f' va fuera de las comillas para que sea un f-string válido
             datos_firmante = {
-                "nombre": "{config['firmante_nombre']}",
-                "cargo": "{config['firmante_cargo']}",
+                "nombre": f"{config['firmante_nombre']}",
+                "cargo": f"{config['firmante_cargo']}",
                 "dui": "02248960-2"
             }
 
-        # Configuración de la firma (ajusta la ruta según tu estructura de carpetas)
-        # Asumimos que está en la misma carpeta que el logo
+        # Configuración de la firma
         ruta_firma = os.path.join(os.path.dirname(config["logo"]), "FirmaLegal.png")
-
-
 
         buffer = BytesIO()
         doc = SimpleDocTemplate(
@@ -180,15 +178,23 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         tratamiento = "la señora" if sexo_val == 'F' else "el señor"
 
         monto_letras = self._monto_a_letras(credito.total_credito_proyectado)
+        
+        # CORRECCIÓN: Extracción de variables limpias para evitar conflictos 
+        # de comillas simples/dobles dentro del f-string del cuerpo
         nombre_firmante_limpio = datos_firmante['nombre'].replace("<b>", "").replace("</b>", "")
+        cargo_firmante = datos_firmante['cargo']
+        dui_firmante = datos_firmante['dui']
+        nombre_cliente = f"{persona.nombres} {persona.apellidos}"
+        dui_cliente = persona.dui
+        id_credito = credito.credito_id
 
-        # Cuerpo del documento
+        # CORRECCIÓN: Se agrega la 'f' al inicio de las comillas triples para procesar las variables
         cuerpo = f"""
         {nombre_firmante_limpio}, mayor de edad, Abogado y Notario, de este domicilio, 
-        con Documento Único de Identidad número {datos_firmante['dui']}, en calidad de {datos_firmante['cargo']} 
-        de <b>LENDER FINANZAS</b>, hace constar que {tratamiento} <b>{persona.nombres} {persona.apellidos}</b>, 
-        identificado con su Documento Único de Identidad número <b>{persona.dui}</b> ha cancelado el crédito 
-        registrado bajo el código <b>{credito.credito_id}</b>.
+        con Documento Único de Identidad número {dui_firmante}, en calidad de {cargo_firmante} 
+        de <b>LENDER FINANZAS</b>, hace constar que {tratamiento} <b>{nombre_cliente}</b>, 
+        identificado con su Documento Único de Identidad número <b>{dui_cliente}</b> ha cancelado el crédito 
+        registrado bajo el código <b>{id_credito}</b>.
         """
         
         elements.append(Paragraph(cuerpo, legal_style))
@@ -204,7 +210,7 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         
         elements.append(Paragraph(pie_fecha, legal_style))
         
-        # Espacio antes de la firma (reducido para compensar el tamaño de la imagen)
+        # Espacio antes de la firma
         elements.append(Spacer(1, 45))
         
         if os.path.exists(ruta_firma):
@@ -214,13 +220,12 @@ class GeneradorFiniquitos(GeneradorDocumentos):
             img_firma = Image(ruta_firma, width=1.6*inch, height=0.8*inch)
             logger.warning(f"ADVERTENCIA: No se encontró la firma en {ruta_firma}")
 
-
         # Tabla de firma estructurada
         firma_info = [
             [img_firma],                                     # Imagen de la firma
             ["________________________"],                    # Línea
             [f"{nombre_firmante_limpio}"],                    # Nombre
-            [f"{datos_firmante['cargo']} | LENDER FINANZAS"]  # Cargo
+            [f"{cargo_firmante} | LENDER FINANZAS"]          # Cargo (Variable limpia utilizada aquí también)
         ]
         
         t_firma = Table(firma_info, colWidths=[350])
@@ -237,7 +242,7 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         doc.build(elements)
         
         # Gestión de archivos y subida
-        nombre_archivo = f"finiquito_{credito.credito_id}_{hoy.strftime('%Y%m%d%H%M%S')}.pdf"
+        nombre_archivo = f"finiquito_{id_credito}_{hoy.strftime('%Y%m%d%H%M%S')}.pdf"
         ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
         
         with open(ruta_archivo, 'wb') as f:
@@ -245,7 +250,7 @@ class GeneradorFiniquitos(GeneradorDocumentos):
         
         url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "finiquitos")
         
-        return ruta_archivo, nombre_archivo, url_publica    
+        return ruta_archivo, nombre_archivo, url_publica
     
 
 class GeneradorEstadosCuenta(GeneradorDocumentos):
