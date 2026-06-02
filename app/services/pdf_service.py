@@ -48,13 +48,15 @@ class GeneradorDocumentos:
                 return {
                     "logo": os.path.join(os.path.dirname(self.logo_path), "LenderCapital.jpg"),
                     "firmante_nombre": "Jazmin Hernandez",
-                    "firmante_cargo": "Gerente Operaciones"
+                    "firmante_cargo": "Gerente Operaciones",
+                    "ancho": 2.0
                 }
             # Configuración por defecto
             return {
                 "logo": self.logo_path,
                 "firmante_nombre": "Evelyn García",
-                "firmante_cargo": "Gerente Operaciones"
+                "firmante_cargo": "Gerente Operaciones",
+                "ancho": 2.5
             }
 
 
@@ -73,7 +75,7 @@ class GeneradorRecibos(GeneradorDocumentos):
         elements = []
         
         if os.path.exists(config["logo"]):
-            logo = Image(config["logo"], width=2.5*inch, height=1*inch)
+            logo = Image(config["logo"], width=config["ancho"]*inch, height=1*inch)
             elements.append(logo)
         
         elements.append(Paragraph(f"<b>RECIBO DE PAGO #{pago.pago_id}</b>", styles['Title']))
