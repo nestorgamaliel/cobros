@@ -49,7 +49,7 @@ class GeneradorDocumentos:
                     "logo": os.path.join(os.path.dirname(self.logo_path), "LenderCapital.jpg"),
                     "firmante_nombre": "Jazmin Hernandez",
                     "firmante_cargo": "Gerente Operaciones",
-                    "ancho": 2.0
+                    "ancho": 1.5
                 }
             # Configuración por defecto
             return {
