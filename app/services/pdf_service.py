@@ -46,7 +46,7 @@ class GeneradorDocumentos:
             """Devuelve el logo y el firmante según el tipo de crédito."""
             if privado == 2:
                 return {
-                    "logo": os.path.join(os.path.dirname(self.logo_path), "LenderCapital.jpg"),
+                    "logo": os.path.join(os.path.dirname(self.logo_path), "LenderCapital.png"),
                     "firmante_nombre": "Jazmin Hernandez",
                     "firmante_cargo": "Gerente Operaciones",
                     "ancho": 1.5
