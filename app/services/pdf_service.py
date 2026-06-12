@@ -257,8 +257,10 @@ class GeneradorFiniquitos(GeneradorDocumentos):
 
 class GeneradorEstadosCuenta(GeneradorDocumentos):
     """Especializada en generar estados de cuenta detallados para Lender Finanzas."""
-
+    
     def generar_estado_cuenta_pdf(self, persona, credito, pagos):
+        config = self.obtener_configuracion_sucursal(credito.privado)
+
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
         styles = getSampleStyleSheet()
@@ -276,8 +278,8 @@ class GeneradorEstadosCuenta(GeneradorDocumentos):
         elements = []
 
         # 1. Logo y Título
-        if os.path.exists(self.logo_path):
-            logo = Image(self.logo_path, width=2.0*inch, height=0.8*inch)
+        if os.path.exists(config["logo"]):
+            logo = Image(config["logo"], width=config["ancho"]*inch, height=1*inch)
             elements.append(logo)
         
         elements.append(Paragraph("<b>ESTADO DE CUENTA DETALLADO</b>", styles['Title']))
