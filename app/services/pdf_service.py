@@ -358,7 +358,6 @@ class GeneradorEstadosCuenta(GeneradorDocumentos):
                 
                 resumen_data.append(["", "MESES PENDIENTES:", f"{m_pendientes} mes(es)"])
                 resumen_data.append(["", "NIVEL DE MORA:", f"{n_mora}"])
-                resumen_data.append(["", "SALDO TOTAL :", f"${s_total_vista:,.2f}"])
             # ------------------------------------------------------------------------
 
             t_resumen = Table(resumen_data, colWidths=[4.0*inch, 1.5*inch, 1.5*inch])
