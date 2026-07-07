@@ -258,119 +258,134 @@ class GeneradorFiniquitos(GeneradorDocumentos):
 class GeneradorEstadosCuenta(GeneradorDocumentos):
     """Especializada en generar estados de cuenta detallados para Lender Finanzas."""
     
-    def generar_estado_cuenta_pdf(self, persona, credito, pagos):
-        config = self.obtener_configuracion_sucursal(credito.privado)
+    def generar_estado_cuenta_pdf(self, persona, credito, pagos, resumen_vistas=None):
+            config = self.obtener_configuracion_sucursal(credito.privado)
 
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
-        styles = getSampleStyleSheet()
-        
-        # Estilo para el pie de página
-        styles.add(ParagraphStyle(
-            name='PiePagina',
-            fontSize=8,
-            leading=10,
-            alignment=1, 
-            textColor=colors.grey,
-            fontName='Helvetica-Oblique'
-        ))
-        
-        elements = []
-
-        # 1. Logo y Título
-        if os.path.exists(config["logo"]):
-            logo = Image(config["logo"], width=config["ancho"]*inch, height=1*inch)
-            elements.append(logo)
-        
-        elements.append(Paragraph("<b>ESTADO DE CUENTA DETALLADO</b>", styles['Title']))
-        elements.append(Spacer(1, 10))
-
-        # 2. Encabezado de Datos
-        comisiones_totales = float(getattr(credito, 'comision_asistencia_financiera', 0) + 
-                                   getattr(credito, 'comision_administrativa', 0))
-        
-        info_data = [
-            [f"ID PERSONA: {persona.persona_id}", f"ID CRÉDITO: {credito.credito_id}"],
-            [f"CLIENTE: {persona.nombres} {persona.apellidos}", f"DUI: {persona.dui}"],
-            [f"FECHA DEL CRÉDITO: {credito.fecha.strftime('%d/%m/%Y') if credito.fecha else '-'}", f"MONTO PROYECTADO: ${credito.total_credito_proyectado:,.2f}"],
-            [f"MONTO OTORGADO: ${credito.monto_colocado:,.2f}", f"CUOTA: ${credito.cuota:,.2f}"],
-            [f"NÚMERO DE CUOTAS: {credito.numero_cuotas}", f"DÍA DE PAGO: {credito.dia_pago}"],
-            [f"MONTO COMISIONES: ${comisiones_totales:,.2f}", ""]
-        ]
-        
-        t_info = Table(info_data, colWidths=[3.5*inch, 3.5*inch])
-        t_info.setStyle(TableStyle([
-            ('FONTNAME', (0,0), (-1,-1), 'Helvetica'), 
-            ('FONTSIZE', (0,0), (-1,-1), 9),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-            ('FONTNAME', (0,0), (1,0), 'Helvetica-Bold'),
-        ]))
-        elements.append(t_info)
-        elements.append(Spacer(1, 20))
-        
-        # 3. Tabla de Movimientos
-        tabla_data = [["FECHA", "DESCRIPCIÓN", "MONTO", "EXTEMPORÁNEO"]]
-        
-        total_abonado_acumulado = 0 # Solo capital/monto
-        for p in pagos:
-            monto_pago = float(p.monto)
-            valor_extemporaneo = float(getattr(p, 'multa', 0) + getattr(p, 'intereses', 0))
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
+            styles = getSampleStyleSheet()
             
-            # Solo acumulamos el monto del abono (sin extemporáneo)
-            total_abonado_acumulado += monto_pago
+            # Estilo para el pie de página
+            if 'PiePagina' not in styles:
+                styles.add(ParagraphStyle(
+                    name='PiePagina',
+                    fontSize=8,
+                    leading=10,
+                    alignment=1, 
+                    textColor=colors.grey,
+                    fontName='Helvetica-Oblique'
+                ))
             
-            tabla_data.append([
-                p.fecha.strftime("%d/%m/%Y") if p.fecha else "-",
-                f"PAGO RECIBO #{p.pago_id}",
-                f"${monto_pago:,.2f}",
-                f"${valor_extemporaneo:,.2f}"
-            ])
+            elements = []
 
-        t_movs = Table(tabla_data, colWidths=[1.0*inch, 3.0*inch, 1.5*inch, 1.5*inch])
-        t_movs.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2C3E50')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
-            ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        elements.append(t_movs)
+            # 1. Logo y Título
+            if os.path.exists(config["logo"]):
+                logo = Image(config["logo"], width=config["ancho"]*inch, height=1*inch)
+                elements.append(logo)
+            
+            elements.append(Paragraph("<b>ESTADO DE CUENTA DETALLADO</b>", styles['Title']))
+            elements.append(Spacer(1, 10))
 
-        # 4. Resumen Final
-        elements.append(Spacer(1, 15))
-        monto_proyectado = float(credito.total_credito_proyectado)
-        # Saldo = Proyectado - Lo efectivamente abonado al capital
-        saldo_pendiente = max(monto_proyectado - total_abonado_acumulado, 0)
-        
-        resumen_data = [
-            ["", "TOTAL ABONADO:", f"${total_abonado_acumulado:,.2f}"],
-            ["", "SALDO PENDIENTE:", f"${saldo_pendiente:,.2f}"]
-        ]
-        t_resumen = Table(resumen_data, colWidths=[4.0*inch, 1.5*inch, 1.5*inch])
-        t_resumen.setStyle(TableStyle([
-            ('ALIGN', (1, 0), (2, -1), 'RIGHT'),
-            ('FONTNAME', (1, 0), (2, -1), 'Helvetica-Bold'),
-        ]))
-        elements.append(t_resumen)
+            # 2. Encabezado de Datos
+            comisiones_totales = float(getattr(credito, 'comision_asistencia_financiera', 0) + 
+                                    getattr(credito, 'comision_administrative', 0))
+            
+            info_data = [
+                [f"ID PERSONA: {persona.persona_id}", f"ID CRÉDITO: {credito.credito_id}"],
+                [f"CLIENTE: {persona.nombres} {persona.apellidos}", f"DUI: {persona.dui}"],
+                [f"FECHA DEL CRÉDITO: {credito.fecha.strftime('%d/%m/%Y') if credito.fecha else '-'}", f"MONTO PROYECTADO: ${credito.total_credito_proyectado:,.2f}"],
+                [f"MONTO OTORGADO: ${credito.monto_colocado:,.2f}", f"CUOTA: ${credito.cuota:,.2f}"],
+                [f"NÚMERO DE CUOTAS: {credito.numero_cuotas}", f"DÍA DE PAGO: {credito.dia_pago}"],
+                [f"MONTO COMISIONES: ${comisiones_totales:,.2f}", ""]
+            ]
+            
+            t_info = Table(info_data, colWidths=[3.5*inch, 3.5*inch])
+            t_info.setStyle(TableStyle([
+                ('FONTNAME', (0,0), (-1,-1), 'Helvetica'), 
+                ('FONTSIZE', (0,0), (-1,-1), 9),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+                ('FONTNAME', (0,0), (1,0), 'Helvetica-Bold'),
+            ]))
+            elements.append(t_info)
+            elements.append(Spacer(1, 20))
+            
+            # 3. Tabla de Movimientos
+            tabla_data = [["FECHA", "DESCRIPCIÓN", "MONTO", "EXTEMPORÁNEO"]]
+            
+            total_abonado_acumulado = 0 # Solo capital/monto
+            for p in pagos:
+                monto_pago = float(p.monto)
+                valor_extemporaneo = float(getattr(p, 'multa', 0) + getattr(p, 'intereses', 0))
+                
+                # Solo acumulamos el monto del abono (sin extemporáneo)
+                total_abonado_acumulado += monto_pago
+                
+                tabla_data.append([
+                    p.fecha.strftime("%d/%m/%Y") if p.fecha else "-",
+                    f"PAGO RECIBO #{p.pago_id}",
+                    f"${monto_pago:,.2f}",
+                    f"${valor_extemporaneo:,.2f}"
+                ])
 
-        # 5. Pie de Página (Línea + Fecha de Emisión)
-        elements.append(Spacer(1, 40)) 
-        elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceBefore=10, spaceAfter=5))
-        
-        fecha_emision = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        pie_texto = f"Este documento es un estado de cuenta informativo emitido el {fecha_emision}"
-        elements.append(Paragraph(pie_texto, styles['PiePagina']))
+            t_movs = Table(tabla_data, colWidths=[1.0*inch, 3.0*inch, 1.5*inch, 1.5*inch])
+            t_movs.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2C3E50')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
+                ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            elements.append(t_movs)
 
-        # 6. Construcción y Guardado
-        doc.build(elements)
-        nombre_archivo = f"estado_cuenta_{credito.credito_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M')}.pdf"
-        ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
-        
-        with open(ruta_archivo, 'wb') as f:
-            f.write(buffer.getvalue())
-        
-        url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "estados_cuenta")
-        return ruta_archivo, nombre_archivo, url_publica
+            # 4. Resumen Final (Matemática interna existente)
+            elements.append(Spacer(1, 15))
+            monto_proyectado = float(credito.total_credito_proyectado)
+            saldo_pendiente = max(monto_proyectado - total_abonado_acumulado, 0)
+            
+            resumen_data = [
+                ["", "TOTAL ABONADO:", f"${total_abonado_acumulado:,.2f}"],
+                ["", "SALDO PENDIENTE:", f"${saldo_pendiente:,.2f}"]
+            ]
+            
+            # --- INTEGRACIÓN NUEVA: Agregar datos de la vista al final del resumen ---
+            if resumen_vistas:
+                m_pendientes = resumen_vistas.get("meses_pendientes", 0)
+                n_mora = resumen_vistas.get("nivel_mora", "Al día")
+                s_total_vista = resumen_vistas.get("saldo_total", 0.0)
+                
+                resumen_data.append(["", "MESES PENDIENTES:", f"{m_pendientes} mes(es)"])
+                resumen_data.append(["", "NIVEL DE MORA:", f"{n_mora}"])
+                resumen_data.append(["", "SALDO TOTAL :", f"${s_total_vista:,.2f}"])
+            # ------------------------------------------------------------------------
+
+            t_resumen = Table(resumen_data, colWidths=[4.0*inch, 1.5*inch, 1.5*inch])
+            t_resumen.setStyle(TableStyle([
+                ('ALIGN', (1, 0), (2, -1), 'RIGHT'),
+                ('FONTNAME', (1, 0), (2, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (1, 0), (2, -1), 9),
+                # Le damos un color sutil a las filas nuevas para que se diferencien de la matemática base
+                ('TEXTCOLOR', (1, 2), (2, -1), colors.HexColor('#2C3E50')) if resumen_vistas else ('TEXTCOLOR', (1, 0), (2, -1), colors.black),
+            ]))
+            elements.append(t_resumen)
+
+            # 5. Pie de Página (Línea + Fecha de Emisión)
+            elements.append(Spacer(1, 40)) 
+            elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceBefore=10, spaceAfter=5))
+            
+            fecha_emision = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            pie_texto = f"Este documento es un estado de cuenta informativo emitido el {fecha_emision}"
+            elements.append(Paragraph(pie_texto, styles['PiePagina']))
+
+            # 6. Construcción y Guardado
+            doc.build(elements)
+            nombre_archivo = f"estado_cuenta_{credito.credito_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M')}.pdf"
+            ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
+            
+            with open(ruta_archivo, 'wb') as f:
+                f.write(buffer.getvalue())
+            
+            url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "estados_cuenta")
+            return ruta_archivo, nombre_archivo, url_publica

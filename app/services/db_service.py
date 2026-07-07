@@ -242,3 +242,26 @@ class BaseDatos:
                 self.session.rollback()
                 logger.error(f"Error al insertar en credito_finiquito: {str(e)}")
                 raise        
+
+    def obtener_resumen_saldos_vista(self, credito_id):
+            """
+            Obtiene meses_pendientes, nivel_mora y saldo_total desde la vista saldos_totales.
+            """
+            sql = text("""
+                SELECT meses_pendientes, nivel_mora, saldo_total
+                FROM public.saldos_totales
+                WHERE credito_id = :credito_id
+                LIMIT 1
+            """)
+            try:
+                result = self.session.execute(sql, {"credito_id": credito_id}).fetchone()
+                if not result:
+                    return None
+                return {
+                    "meses_pendientes": int(result.meses_pendientes) if result.meses_pendientes is not None else 0,
+                    "nivel_mora": result.nivel_mora,
+                    "saldo_total": float(result.saldo_total) if result.saldo_total is not None else 0.0
+                }
+            except Exception as e:
+                logger.error(f"Error en obtener_resumen_saldos_vista: {str(e)}")
+                raise            
