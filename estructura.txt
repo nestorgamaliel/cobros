@@ -23,6 +23,7 @@
 │   │   ├── __init__.py
 │   │   ├── credito_service.py
 │   │   ├── db_service.py
+│   │   ├── estado_cuenta_service.py
 │   │   ├── finiquito_service.py
 │   │   ├── notificacion_service.py
 │   │   ├── pago_service.py
@@ -59,9 +60,15 @@
 ├── recibos
 ├── recursos
 │   ├── FirmaLegal.png
-│   └── Lender_logo.jpg
+│   ├── LenderCapital.jpg
+│   ├── LenderCapital.png
+│   ├── LenderCapital2.png
+│   ├── Lender_logo.jpg
+│   ├── Lenser_logo.png
+│   ├── Logo_chalchuapa2.png
+│   └── Logo_chalchuapa3.jpg
 ├── requirements.txt
 ├── run.py
 └── wsgi.py
 
-11 directories, 54 files
+11 directories, 61 files

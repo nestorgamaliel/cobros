@@ -4,8 +4,8 @@ from flask import Flask
 from config import settings
 from app.utils.logger import setup_logger
 from .estado_cuenta_service import EstadoCuentaService
+from .saldo_diario_service import ServicioSaldoDiario  # <--- 1. Importar Clase
 
-# Configurar logger global
 logger = setup_logger(__name__)
 
 # Singletons para los servicios
@@ -17,35 +17,30 @@ credito_service = None
 vendedor_service = None
 estado_cuenta_service = None
 finiquito_service = None
+saldo_diario_service = None  # <--- 2. Variable Global
 
 def inicializar_servicios():
-    """Inicializa los servicios centralizados inyectando dependencias."""
-    # Agregamos TODAS las globales necesarias
-    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, estado_cuenta_service, finiquito_service
+    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, estado_cuenta_service, finiquito_service, saldo_diario_service
     
     try:
-        # Importamos las clases (Asegúrate que ServicioFiniquitos esté disponible)
         from app.services import (
             BaseDatos, GeneradorRecibos, ServicioPagos, 
             ServicioPersonas, ServicioCreditos, ServicioVendedores,
             ServicioFiniquitos 
         )
 
-        # 1. Base de Datos y PDF (Dependencias base)
         logger.info("Conectando a la base de datos...")
         db_service = BaseDatos(settings.SQLALCHEMY_DATABASE_URI)
         pdf_service = GeneradorRecibos(settings.RECIBOS_DIR)
         
-        # 2. Servicios de Negocio
         persona_service = ServicioPersonas(db_service)
         credito_service = ServicioCreditos(db_service)    
         vendedor_service = ServicioVendedores(db_service)
         
-        # 3. NUEVOS SERVICIOS (Instanciación correcta)
         estado_cuenta_service = EstadoCuentaService(db_service)
-        finiquito_service = ServicioFiniquitos(db_service) # <--- ESTO FALTABA
+        finiquito_service = ServicioFiniquitos(db_service)
+        saldo_diario_service = ServicioSaldoDiario(db_service)  # <--- 3. Instanciar Servicio
 
-        # 4. PagoService requiere db y pdf
         pago_service = ServicioPagos(db_service, pdf_service)
 
         logger.info("Todos los servicios han sido cargados correctamente")
@@ -56,26 +51,19 @@ def inicializar_servicios():
         raise e
 
 def create_app(test_config=None):
-    """Factory principal de la aplicación."""
     app = Flask(__name__)
     
-    # 1. Configuración
     if test_config:
         app.config.from_mapping(test_config)
     else:
         app.config.from_object(settings)
     
-    # 2. Preparar entorno
     settings.init_app(app)
-    
-    # 3. Arrancar servicios
     inicializar_servicios()
     
-    # --- CAMBIO AQUÍ: Importamos init_routes ---
     from app.api.routes import init_routes
     
-    # --- CAMBIO AQUÍ: Forzamos el uso de las globales actualizadas ---
-    global pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service
+    global pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service, saldo_diario_service
 
     servicios_check = [
         pago_service, 
@@ -83,26 +71,25 @@ def create_app(test_config=None):
         credito_service, 
         vendedor_service, 
         finiquito_service, 
-        estado_cuenta_service
+        estado_cuenta_service,
+        saldo_diario_service  # <--- 4. Agregar a la verificación
     ]
 
-    # Debug log para ver qué está llegando realmente a Cloud Run
     logger.info(f"Verificando servicios para rutas: {[s is not None for s in servicios_check]}")
 
     if all(servicios_check):
-        # Esta llamada DEBE tener los 6 argumentos y las variables DEBEN estar cargadas
         api_bp = init_routes(
             pago_service, 
             persona_service, 
             credito_service, 
             vendedor_service,
             finiquito_service,     
-            estado_cuenta_service  
+            estado_cuenta_service,
+            saldo_diario_service  # <--- 5. Pasar a init_routes
         )
         app.register_blueprint(api_bp, url_prefix='/api')
         logger.info("Blueprints registrados exitosamente")
     else:
-        # Esto te dirá exactamente cuál es None en los logs de Cloud Run
         missing = []
         if not pago_service: missing.append("pago")
         if not persona_service: missing.append("persona")
@@ -110,6 +97,7 @@ def create_app(test_config=None):
         if not vendedor_service: missing.append("vendedor")
         if not finiquito_service: missing.append("finiquito")
         if not estado_cuenta_service: missing.append("estado_cuenta")
+        if not saldo_diario_service: missing.append("saldo_diario")
         logger.error(f"No se pudieron registrar las rutas. Servicios faltantes: {missing}")
         
 
@@ -124,8 +112,8 @@ def create_app(test_config=None):
     
     return app
 
-# Getters para otros módulos
 def get_db_service(): return db_service
 def get_pago_service(): return pago_service
 def get_persona_service(): return persona_service
 def get_credito_service(): return credito_service
+def get_saldo_diario_service(): return saldo_diario_service

@@ -39,3 +39,10 @@ class CreditoDTO(CreditoBase):
     
     class Config:
         from_attributes = True
+
+
+class ConsultaSaldoDiarioRequest(BaseModel):
+    credito_id: int = Field(..., description="ID único del crédito registrado")
+    tasa_anual: float = Field(..., description="Tasa de interés anual fija (ej. 0.80 para 80%)")
+    tasa_mora_anual: float = Field(..., description="Tasa de interés de mora anual (ej. 0.05 para 5%)")
+    fecha_corte: Optional[date] = Field(None, description="Fecha de corte opcional (YYYY-MM-DD), por defecto hoy")        
