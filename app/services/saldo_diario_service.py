@@ -29,7 +29,7 @@ class ServicioSaldoDiario:
             if not credito:
                 raise ValueError(f"No se encontró el crédito con ID {credito_id}")
 
-            monto_inicial = float(credito.monto_otorgado)
+            monto_inicial = float(credito.monto_colocado)
             fecha_inicio = credito.fecha_inicio
 
             # Si es un string YYYY-MM-DD lo convertimos a objeto date
