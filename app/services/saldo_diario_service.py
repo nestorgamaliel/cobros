@@ -1,6 +1,9 @@
 # app/services/saldo_diario_service.py
 from datetime import datetime, date, timedelta
-from app.models.models import Credito  # Ajusta la importación según tu ORM
+from app.models.models import Credito, Pago
+from app.utils.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 class ServicioSaldoDiario:
     def __init__(self, db_service):
@@ -16,20 +19,36 @@ class ServicioSaldoDiario:
         if not fecha_corte:
             fecha_corte = date.today()
 
-        # Obtenemos la sesión mediante el gestor central de BD
-        session = self.db.get_session()
-        
         try:
-            # 1. Consultar crédito en la BD
-            credito = session.query(Credito).filter(Credito.id == credito_id).first()
+            # 1. Consultar crédito usando la abstracción o query directa de tu db_service
+            if hasattr(self.db, 'obtener_credito'):
+                credito = self.db.obtener_credito(credito_id)
+            else:
+                credito = self.db.session.query(Credito).filter(Credito.id == credito_id).first()
+
             if not credito:
                 raise ValueError(f"No se encontró el crédito con ID {credito_id}")
 
             monto_inicial = float(credito.monto_otorgado)
             fecha_inicio = credito.fecha_inicio
+
+            # Si es un string YYYY-MM-DD lo convertimos a objeto date
+            if isinstance(fecha_inicio, str):
+                fecha_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
             
-            # Filtrar pagos hasta la fecha de corte ordenados cronológicamente
-            pagos = sorted([p for p in credito.pagos if p.fecha <= fecha_corte], key=lambda x: x.fecha)
+            # 2. Consultar pagos registrados directamente con la sesión de db_service
+            pagos_query = (
+                self.db.session.query(Pago)
+                .filter(Pago.credito_id == credito_id)
+                .order_by(Pago.fecha.asc())
+                .all()
+            )
+
+            # Filtrar los pagos que sean anteriores o iguales a la fecha de corte
+            pagos = [
+                p for p in pagos_query 
+                if (p.fecha.date() if isinstance(p.fecha, datetime) else p.fecha) <= fecha_corte
+            ]
 
             r_diario = tasa_anual / 365.0
             
@@ -37,9 +56,11 @@ class ServicioSaldoDiario:
             fecha_anterior = fecha_inicio
             tramos = []
 
-            # 2. Amortización tramo por tramo
+            # 3. Amortización tramo por tramo
             for p in pagos:
-                dias_periodo = (p.fecha - fecha_anterior).days
+                p_fecha = p.fecha.date() if isinstance(p.fecha, datetime) else p.fecha
+                dias_periodo = (p_fecha - fecha_anterior).days
+                
                 if dias_periodo > 0:
                     interes_generado = capital_vigente * r_diario * dias_periodo
                     monto_pago = float(p.monto)
@@ -49,15 +70,15 @@ class ServicioSaldoDiario:
                     nuevo_capital = max(0.0, capital_vigente - abono_capital)
 
                     tramos.append({
-                        "periodo": f"Del {fecha_anterior.strftime('%d-%b-%Y')} al {p.fecha.strftime('%d-%b-%Y')} ({dias_periodo} días)",
+                        "periodo": f"Del {fecha_anterior.strftime('%d-%b-%Y')} al {p_fecha.strftime('%d-%b-%Y')} ({dias_periodo} días)",
                         "fecha_inicio": fecha_anterior.isoformat(),
-                        "fecha_fin": p.fecha.isoformat(),
+                        "fecha_fin": p_fecha.isoformat(),
                         "dias_transcurridos": dias_periodo,
                         "capital_inicial": round(capital_vigente, 2),
                         "tasa_anual_aplicada": round(tasa_anual * 100, 2),
                         "interes_generado": round(interes_generado, 2),
                         "pago_recibido": {
-                            "fecha": p.fecha.isoformat(),
+                            "fecha": p_fecha.isoformat(),
                             "monto": round(monto_pago, 2),
                             "cobertura_interes": round(interes_cubierto, 2),
                             "abono_capital": round(abono_capital, 2)
@@ -66,9 +87,9 @@ class ServicioSaldoDiario:
                     })
                     
                     capital_vigente = nuevo_capital
-                    fecha_anterior = p.fecha
+                    fecha_anterior = p_fecha
 
-            # 3. Tramo actual acumulado
+            # 4. Tramo actual acumulado
             dias_tramo_actual = (fecha_corte - fecha_anterior).days
             interes_tramo_actual = capital_vigente * r_diario * dias_tramo_actual
 
@@ -81,7 +102,14 @@ class ServicioSaldoDiario:
                 "interes_generado": round(interes_tramo_actual, 2)
             }
 
-            nombre_cliente = f"{credito.persona.nombres} {credito.persona.apellidos}" if hasattr(credito, 'persona') else "N/A"
+            # Obtención del nombre del cliente
+            nombre_cliente = "N/A"
+            if hasattr(credito, 'persona') and credito.persona:
+                nombre_cliente = f"{credito.persona.nombres} {credito.persona.apellidos}"
+            elif hasattr(self.db, 'obtener_persona') and getattr(credito, 'persona_id', None):
+                persona = self.db.obtener_persona(credito.persona_id)
+                if persona:
+                    nombre_cliente = f"{persona.nombres} {persona.apellidos}"
 
             return {
                 "credito_id": credito_id,
@@ -101,5 +129,7 @@ class ServicioSaldoDiario:
                     "saldo_total_real": round(capital_vigente + interes_tramo_actual, 2)
                 }
             }
-        finally:
-            session.close()
+
+        except Exception as e:
+            logger.error(f"Error calculando saldo diario para crédito {credito_id}: {str(e)}")
+            raise e
