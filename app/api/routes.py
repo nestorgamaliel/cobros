@@ -34,11 +34,16 @@ def init_routes(
     # -------------------------------------------------------------------------
     # SERVICIOS SECUNDARIOS / INFRAESTRUCTURA
     # -------------------------------------------------------------------------
-    twilio_provider = TwilioProvider(
-        account_sid=settings.TWILIO_ACCOUNT_SID,
-        auth_token=settings.TWILIO_AUTH_TOKEN,
-        from_number=settings.TWILIO_WHATSAPP_NUMBER
-    )
+    try:
+        twilio_provider = TwilioProvider(
+            settings.TWILIO_ACCOUNT_SID,
+            settings.TWILIO_AUTH_TOKEN,
+            settings.TWILIO_WHATSAPP_NUMBER
+        )
+    except TypeError:
+        # Fallback por si TwilioProvider espera el objeto settings completo
+        twilio_provider = TwilioProvider(settings)
+
     whatsapp_service = WhatsAppService(provider=twilio_provider)
     notificacion_service = NotificacionService(
         whatsapp_service=whatsapp_service,
