@@ -2,11 +2,9 @@
 import os
 from flask import Flask
 from flask_cors import CORS
-# Importamos settings y logger primero para asegurar que la config sea válida
 from config import settings
 from app.utils.logger import setup_logger
 
-# Configurar logger
 logger = setup_logger(__name__)
 
 # Variables globales para los servicios (Singleton pattern manual)
@@ -25,13 +23,13 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     CORS(app)
 
-    # 1. Cargar configuración desde el objeto Pydantic
+    # 1. Cargar configuración
     if test_config is None:
         app.config.from_object(settings)
     else:
         app.config.from_mapping(test_config)
     
-    # 2. Inicializar carpetas físicas (como RECIBOS_DIR)
+    # 2. Inicializar carpetas físicas
     settings.init_app(app)
     
     # 3. Inicializar servicios de negocio y base de datos
@@ -40,7 +38,7 @@ def create_app(test_config=None):
     # 4. Registrar rutas (Blueprint)
     from app.api.routes import init_routes
     
-    # Inyección de los 7 servicios
+    # IMPORTANTE: Aseguramos el orden exacto de los servicios que espera tu init_routes
     app.register_blueprint(
         init_routes(
             pago_service, 
@@ -58,7 +56,7 @@ def create_app(test_config=None):
     def index():
         return {
             'status': 'ok', 
-            'version': '3.1 (Saldo Diario)',
+            'version': '3.1 (Cobros API)',
             'message': 'Sistema de Gestión de Cobros funcionando correctamente',
             'environment': 'Production' if not app.debug else 'Development'
         }
@@ -68,11 +66,9 @@ def create_app(test_config=None):
 
 def inicializar_servicios():
     """Inicializa los servicios centralizados inyectando las dependencias necesarias."""
-    # 1. Agregamos saldo_diario_service a las globales
     global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service, saldo_diario_service
     
     try:
-        # Importaciones tardías para evitar dependencias circulares
         from app.services.db_service import BaseDatos
         from app.services.pdf_service import GeneradorRecibos
         from app.services.pago_service import ServicioPagos
@@ -81,28 +77,28 @@ def inicializar_servicios():
         from app.services.vendedor_service import ServicioVendedores
         from app.services.finiquito_service import FiniquitoService
         from app.services.estado_cuenta_service import EstadoCuentaService
-        from app.services.saldo_diario_service import ServicioSaldoDiario # <--- 2. NUEVA IMPORTACIÓN
+        from app.services.saldo_diario_service import ServicioSaldoDiario
 
         # 1. Servicios base
         db_service = BaseDatos(settings.SQLALCHEMY_DATABASE_URI)
         pdf_service = GeneradorRecibos(settings.RECIBOS_DIR)
         
-        # 2. Servicios de negocio con inyección de dependencias
+        # 2. Servicios de negocio
         pago_service = ServicioPagos(db_service, pdf_service)
         persona_service = ServicioPersonas(db_service)
         credito_service = ServicioCreditos(db_service)    
         vendedor_service = ServicioVendedores(db_service)
         finiquito_service = FiniquitoService(db_service)
         estado_cuenta_service = EstadoCuentaService(db_service)
-        saldo_diario_service = ServicioSaldoDiario(db_service) # <--- 3. INSTANCIACIÓN FALTANTE
+        saldo_diario_service = ServicioSaldoDiario(db_service)
         
-        logger.info("Todos los servicios del sistema (incluyendo Saldo Diario) han sido cargados")
+        logger.info("Todos los servicios han sido cargados correctamente")
         
     except Exception as e:
         logger.error(f"Error crítico al inicializar servicios: {str(e)}")
         raise e
 
-# --- Getters para acceso externo (opcional) ---
+# --- Getters para acceso externo ---
 def get_db_service(): return db_service
 def get_pdf_service(): return pdf_service
 def get_pago_service(): return pago_service

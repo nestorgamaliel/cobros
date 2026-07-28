@@ -1,0 +1,36 @@
+credito_id,fecha_credito,nombres,apellidos,cuota,ultima_fecha_pago,monto_otorgado,saldo_real_diario
+328,2026-05-18,Carlos,Flores Martinez,25.00,,200.00,230.68
+318,2026-05-18,Dalila Andrea,Monterroza Barrientos,25.00,2026-07-16,200.00,179.78
+261,2026-01-08,Daniel Humberto,Monterroza Argueta,25.00,2026-06-27,200.00,80.73
+322,2026-05-17,Daniel Humberto,Monterroza Argueta,12.50,2026-06-27,100.00,102.83
+293,2026-03-17,Daniel Humberto,Monterroza Argueta,18.00,2026-06-27,200.00,213.12
+242,2025-12-04,Daniel Humberto,Monterroza Argueta,25.00,2026-06-27,200.00,0.0
+286,2026-03-01,Daniel Humberto,Monterroza Argueta,8.75,2026-06-27,50.00,26.48
+299,2026-03-30,Daniel Humberto,Monterroza Argueta,12.50,2026-06-27,100.00,85.32
+279,2026-02-19,Denis Bladimir,Mayen Galan,37.50,2026-06-27,300.00,192.73
+329,2026-05-18,Douglas Roberto,Carbajal Rodriguez,25.00,,200.00,230.68
+298,2026-03-30,Elmer Alejandro,Miranda,50.00,2026-06-27,400.00,341.28
+280,2026-02-19,Elmer Alejandro,Miranda,25.00,2026-06-27,200.00,128.49
+285,2026-03-01,Felix Alberto,Hernández Lopez,25.00,2026-06-27,200.00,122.68
+213,2025-10-10,Felix Alberto,Hernández Lopez,25.00,2026-06-27,200.00,0.0
+247,2025-12-12,Fernando Geovanni,Alvarado Cañas,25.00,2026-06-27,200.00,0.0
+226,2025-10-23,Fernando Geovanni,Alvarado Cañas,25.00,2026-06-27,200.00,0.0
+274,2026-02-03,Fernando Geovanni,Alvarado Cañas,25.00,2026-06-27,200.00,69.23
+304,2026-04-11,Flor,Escobar,12.50,2026-06-27,200.00,213.15
+309,2026-04-17,Francisco Ernesto,Campos,62.50,2026-06-27,500.00,479.74
+269,2026-01-23,José Antonio,Morales,25.00,2026-06-27,200.00,76.0
+284,2026-03-01,José Guillermo,Gomez Gimenez,37.50,2026-06-27,300.00,184.02
+294,2026-03-17,José Luis,Martinez Sanchez,50.00,2026-06-27,400.00,355.42
+327,2026-05-18,Julio Samuel,Martinez Molina,25.00,,200.00,230.68
+323,2026-05-21,Laura Carolina,Ramirez,25.00,2026-06-27,200.00,203.79
+326,2026-05-18,Marina,Acosta,31.25,,250.00,288.36
+281,2026-02-19,Nelson Alfredo,Pinto Castellanos,25.00,2026-06-27,200.00,128.49
+233,2025-11-06,Nelson Alfredo,Pinto Castellanos,25.00,2026-06-27,200.00,0.0
+308,2026-04-16,Odali Xiomara,Martinez de Chavez,31.25,2026-06-27,250.00,240.51
+289,2026-03-09,Rafael,Flores,25.00,2026-06-27,150.00,83.71
+237,2025-11-21,Rafael,Flores,15.00,2026-06-27,150.00,30.88
+206,2025-09-30,Rafael,Flores,25.00,2026-06-27,200.00,0.0
+288,2026-03-09,Ricardo,Guardado Moran,12.50,2026-06-27,100.00,59.02
+265,2026-01-16,Ricardo,Guardado Moran,25.00,2026-06-27,200.00,44.45
+275,2026-02-05,Rosa del Carmen,Mejía de Hernández ,25.00,2026-06-01,200.00,101.28
+266,2026-01-16,Sandra,Barrientos,25.00,2026-06-01,200.00,42.91

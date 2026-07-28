@@ -1,25 +1,77 @@
-# generar_reporte.py
+# listado_creditos_saldos.py
 import pandas as pd
 from datetime import date
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
 
 from app import create_app
-from app.services import get_db_service, get_saldo_diario_service
+from app.models.models import Credito, Pago
+from config import settings
 
-# Configuración de exportación
 ARCHIVO_SALIDA = "creditos_daniel_saldo_real.csv"
-TASA_ANUAL = 0.80     # 80% anual
-TASA_MORA = 0.05      # 5% anual
+TASA_ANUAL = 0.80
+TASA_MORA = 0.05
 FECHA_CORTE = date.today()
+
+def calcular_saldo_directo(session, credito_id: int, tasa_anual: float, fecha_corte: date) -> float:
+    """Calcula el saldo diario insoluto directamente en el script sin modificar servicios."""
+    # 1. Obtener crédito filtrando por la clave primaria correcta (credito_id)
+    credito = session.query(Credito).filter(Credito.credito_id == credito_id).first()
+    if not credito:
+        return 0.0
+
+    monto_inicial = float(credito.monto_colocado)
+    fecha_inicio = credito.fecha
+    
+    if hasattr(fecha_inicio, 'date'):
+        fecha_inicio = fecha_inicio.date()
+
+    # 2. Consultar pagos registrados
+    pagos_query = (
+        session.query(Pago)
+        .filter(Pago.credito_id == credito_id)
+        .order_by(Pago.fecha.asc())
+        .all()
+    )
+
+    pagos = [
+        p for p in pagos_query 
+        if (p.fecha.date() if hasattr(p.fecha, 'date') else p.fecha) <= fecha_corte
+    ]
+
+    r_diario = tasa_anual / 365.0
+    capital_vigente = monto_inicial
+    fecha_anterior = fecha_inicio
+
+    # 3. Aplicar amortización tramo por tramo
+    for p in pagos:
+        p_fecha = p.fecha.date() if hasattr(p.fecha, 'date') else p.fecha
+        dias_periodo = (p_fecha - fecha_anterior).days
+        
+        if dias_periodo > 0:
+            interes_generado = capital_vigente * r_diario * dias_periodo
+            monto_pago = float(p.monto)
+            
+            interes_cubierto = min(monto_pago, interes_generado)
+            abono_capital = max(0.0, monto_pago - interes_cubierto)
+            capital_vigente = max(0.0, capital_vigente - abono_capital)
+            fecha_anterior = p_fecha
+
+    # 4. Tramo actual hasta la fecha de corte
+    dias_tramo_actual = (fecha_corte - fecha_anterior).days
+    interes_tramo_actual = capital_vigente * r_diario * dias_tramo_actual
+
+    return round(capital_vigente + interes_tramo_actual, 2)
+
 
 def generar_reporte_desde_sql():
     app = create_app()
     
     with app.app_context():
-        db_service = get_db_service()
-        servicio_saldo = get_saldo_diario_service()
+        engine = create_engine(settings.SQLALCHEMY_DATABASE_URI)
+        Session = sessionmaker(bind=engine)
+        session = Session()
         
-        # 1. Consulta SQL enviada
         query = text("""
             SELECT credito_id, 
                    fecha_credito, 
@@ -34,44 +86,40 @@ def generar_reporte_desde_sql():
         """)
         
         print("Ejecutando consulta SQL en la base de datos...")
-        with db_service.session as session:
-            # Ejecutar la consulta y cargar el resultado en un DataFrame
+        
+        try:
             resultado = session.execute(query)
-            # Extraer nombres de columnas y registros
             columnas = resultado.keys()
             filas = resultado.fetchall()
             
             df = pd.DataFrame(filas, columns=columnas)
+            print(f"Se encontraron {len(df)} registros. Calculando saldo real diario...")
             
-        print(f"Se encontraron {len(df)} registros. Calculando saldo real diario...")
-        
-        saldos_reales = []
-        
-        # 2. Iterar por cada crédito devuelto por el SQL
-        for index, row in df.iterrows():
-            credito_id = int(row['credito_id'])
-            try:
-                # Calcular saldo con tu servicio de saldos insolutos
-                res = servicio_saldo.calcular_desglose_saldo_diario(
-                    credito_id=credito_id,
-                    tasa_anual=TASA_ANUAL,
-                    tasa_mora_anual=TASA_MORA,
-                    fecha_corte=FECHA_CORTE
-                )
-                saldo_total = res['resumen_saldo']['saldo_total_real']
-                saldos_reales.append(saldo_total)
-                print(f"Crédito ID {credito_id} ({row['nombres']} {row['apellidos']}): Saldo Real = ${saldo_total:.2f}")
-            except Exception as e:
-                print(f"Error procesando crédito {credito_id}: {str(e)}")
-                saldos_reales.append(0.0)
-                
-        # 3. Agregar la columna con el saldo real al final del DataFrame
-        df['saldo_real_diario'] = saldos_reales
-        
-        # 4. Guardar resultado final a CSV
-        df.to_csv(ARCHIVO_SALIDA, index=False, encoding='utf-8')
-        print(f"\n¡Proceso completado con éxito!")
-        print(f"Archivo generado: {ARCHIVO_SALIDA}")
+            saldos_reales = []
+            
+            for index, row in df.iterrows():
+                c_id = int(row['credito_id'])
+                try:
+                    saldo_total = calcular_saldo_directo(
+                        session=session,
+                        credito_id=c_id,
+                        tasa_anual=TASA_ANUAL,
+                        fecha_corte=FECHA_CORTE
+                    )
+                    saldos_reales.append(saldo_total)
+                    print(f"Crédito ID {c_id} ({row['nombres']} {row['apellidos']}): Saldo Real = ${saldo_total:.2f}")
+                except Exception as e:
+                    print(f"Error procesando crédito {c_id}: {str(e)}")
+                    saldos_reales.append(0.0)
+                    
+            df['saldo_real_diario'] = saldos_reales
+            df.to_csv(ARCHIVO_SALIDA, index=False, encoding='utf-8')
+            
+            print(f"\n¡Proceso completado con éxito!")
+            print(f"Archivo generado: {ARCHIVO_SALIDA}")
+            
+        finally:
+            session.close()
 
 if __name__ == '__main__':
     generar_reporte_desde_sql()
