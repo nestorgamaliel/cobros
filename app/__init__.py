@@ -7,7 +7,7 @@ from app.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
-# Variables globales para los servicios (Singleton pattern manual)
+# Singletons para los servicios
 db_service = None
 pdf_service = None
 pago_service = None
@@ -38,7 +38,9 @@ def create_app(test_config=None):
     # 4. Registrar rutas (Blueprint)
     from app.api.routes import init_routes
     
-    # IMPORTANTE: Aseguramos el orden exacto de los servicios que espera tu init_routes
+    # Pasamos exactamente los 7 argumentos en el mismo orden que espera init_routes en routes.py:
+    # (servicio_pagos, servicio_personas, servicio_creditos, servicio_vendedores, 
+    #  servicio_finiquitos, servicio_estado_cuenta, servicio_saldo_diario)
     app.register_blueprint(
         init_routes(
             pago_service, 
@@ -47,7 +49,7 @@ def create_app(test_config=None):
             vendedor_service, 
             finiquito_service,
             estado_cuenta_service,
-            saldo_diario_service 
+            saldo_diario_service
         ),
         url_prefix='/api'
     )
@@ -79,11 +81,11 @@ def inicializar_servicios():
         from app.services.estado_cuenta_service import EstadoCuentaService
         from app.services.saldo_diario_service import ServicioSaldoDiario
 
-        # 1. Servicios base
+        # 1. Servicios base de infraestructura
         db_service = BaseDatos(settings.SQLALCHEMY_DATABASE_URI)
         pdf_service = GeneradorRecibos(settings.RECIBOS_DIR)
         
-        # 2. Servicios de negocio
+        # 2. Servicios de lógica de negocio
         pago_service = ServicioPagos(db_service, pdf_service)
         persona_service = ServicioPersonas(db_service)
         credito_service = ServicioCreditos(db_service)    
