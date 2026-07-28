@@ -38,9 +38,7 @@ def create_app(test_config=None):
     # 4. Registrar rutas (Blueprint)
     from app.api.routes import init_routes
     
-    # Pasamos exactamente los 7 argumentos en el mismo orden que espera init_routes en routes.py:
-    # (servicio_pagos, servicio_personas, servicio_creditos, servicio_vendedores, 
-    #  servicio_finiquitos, servicio_estado_cuenta, servicio_saldo_diario)
+    # Inyección de los 7 servicios en el orden posicional exacto
     app.register_blueprint(
         init_routes(
             pago_service, 
