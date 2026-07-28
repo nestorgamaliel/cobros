@@ -103,7 +103,16 @@ def init_routes(
         try:
             datos = request.get_json()
             pago_dto = PagoCreate(**datos)
-            pago_creado, error = servicio_pagos.registrar_pago(pago_dto)
+            
+            # Desempaquetado seguro/flexible por si servicio_pagos retorna 2, 3 o más elementos
+            res = servicio_pagos.registrar_pago(pago_dto)
+            
+            if isinstance(res, tuple):
+                pago_creado = res[0]
+                error = res[1]
+            else:
+                pago_creado = res
+                error = None
 
             if error:
                 return jsonify({'error': error}), 400
@@ -113,11 +122,21 @@ def init_routes(
                 try:
                     notificacion_service.notificar_pago_registrado(pago_creado)
                 except Exception as e_notif:
-                    logger.warning(f"Omisión de notificación para pago {pago_creado.id}: {str(e_notif)}")
+                    logger.warning(f"Omisión de notificación para pago: {str(e_notif)}")
+
+            # Serialización flexible
+            if hasattr(pago_creado, 'model_dump'):
+                pago_dict = pago_creado.model_dump()
+            elif hasattr(pago_creado, 'dict'):
+                pago_dict = pago_creado.dict()
+            elif isinstance(pago_creado, dict):
+                pago_dict = pago_creado
+            else:
+                pago_dict = str(pago_creado)
 
             return jsonify({
                 'mensaje': 'Pago registrado exitosamente',
-                'pago': pago_creado.model_dump()
+                'pago': pago_dict
             }), 201
 
         except Exception as e:
