@@ -29,13 +29,17 @@ def init_routes(
     api_blueprint = Blueprint('api', __name__)
 
     # -------------------------------------------------------------------------
-    # SERVICIOS SECUNDARIOS / INFRAESTRUCTURA (Sin Twilio)
+    # SERVICIOS SECUNDARIOS / INFRAESTRUCTURA
     # -------------------------------------------------------------------------
-    notificacion_service = NotificacionService(
-        whatsapp_service=None,
-        pdf_service=servicio_pagos.pdf_service,
-        base_url_pdf=settings.BASE_URL_PDF
-    )
+    try:
+        notificacion_service = NotificacionService(
+            whatsapp_service=None,
+            pdf_service=getattr(servicio_pagos, 'pdf_generator', None),
+            base_url_pdf=getattr(settings, 'BASE_URL_PDF', '')
+        )
+    except Exception as e_notif_init:
+        logger.warning(f"No se pudo inicializar NotificacionService: {str(e_notif_init)}")
+        notificacion_service = None
 
     # -------------------------------------------------------------------------
     # RUTAS: SALDO DIARIO
@@ -104,12 +108,12 @@ def init_routes(
             if error:
                 return jsonify({'error': error}), 400
 
-            # Intento de notificación seguro sin lanzar excepciones
-            try:
-                if notificacion_service and hasattr(notificacion_service, 'notificar_pago_registrado'):
+            # Intento de notificación opcional
+            if notificacion_service and hasattr(notificacion_service, 'notificar_pago_registrado'):
+                try:
                     notificacion_service.notificar_pago_registrado(pago_creado)
-            except Exception as e_notif:
-                logger.warning(f"Omisión de notificación para pago {pago_creado.id}: {str(e_notif)}")
+                except Exception as e_notif:
+                    logger.warning(f"Omisión de notificación para pago {pago_creado.id}: {str(e_notif)}")
 
             return jsonify({
                 'mensaje': 'Pago registrado exitosamente',
