@@ -11,9 +11,6 @@ from app.schemas.persona import PersonaCreate, PersonaUpdate
 from app.schemas.credito import CreditoCreate
 from app.schemas.pago import PagoCreate
 
-# Servicios comunicación
-from app.services.whatsapp_service import WhatsAppService, TwilioProvider
-
 logger = setup_logger(__name__)
 
 
@@ -32,21 +29,10 @@ def init_routes(
     api_blueprint = Blueprint('api', __name__)
 
     # -------------------------------------------------------------------------
-    # SERVICIOS SECUNDARIOS / INFRAESTRUCTURA
+    # SERVICIOS SECUNDARIOS / INFRAESTRUCTURA (Sin Twilio)
     # -------------------------------------------------------------------------
-    try:
-        twilio_provider = TwilioProvider(
-            settings.TWILIO_ACCOUNT_SID,
-            settings.TWILIO_AUTH_TOKEN,
-            settings.TWILIO_WHATSAPP_NUMBER
-        )
-    except TypeError:
-        # Fallback por si TwilioProvider espera el objeto settings completo
-        twilio_provider = TwilioProvider(settings)
-
-    whatsapp_service = WhatsAppService(provider=twilio_provider)
     notificacion_service = NotificacionService(
-        whatsapp_service=whatsapp_service,
+        whatsapp_service=None,
         pdf_service=servicio_pagos.pdf_service,
         base_url_pdf=settings.BASE_URL_PDF
     )
@@ -118,11 +104,12 @@ def init_routes(
             if error:
                 return jsonify({'error': error}), 400
 
-            # Envío asíncrono / no bloqueante de notificación por WhatsApp si aplica
+            # Intento de notificación seguro sin lanzar excepciones
             try:
-                notificacion_service.notificar_pago_registrado(pago_creado)
+                if notificacion_service and hasattr(notificacion_service, 'notificar_pago_registrado'):
+                    notificacion_service.notificar_pago_registrado(pago_creado)
             except Exception as e_notif:
-                logger.warning(f"No se pudo enviar notificación de WhatsApp para el pago {pago_creado.id}: {str(e_notif)}")
+                logger.warning(f"Omisión de notificación para pago {pago_creado.id}: {str(e_notif)}")
 
             return jsonify({
                 'mensaje': 'Pago registrado exitosamente',
