@@ -2,7 +2,10 @@
 import datetime
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from app.models import Base, Persona, Credito, Pago, Vendedor, CreditoComision
+from app.models import (
+    Base, Persona, Credito, Pago, Vendedor, CreditoComision,
+    CreditoReestructuracion, CreditoReestructuracionDetalle
+)
 from app.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -214,73 +217,68 @@ class BaseDatos:
     def cerrar(self):
         self.session.close()
 
-
     def insertar_registro_finiquito(self, credito_id, url_documento, monto_cancelado, firmante=None):
-            """
-            Registra la generación de un nuevo finiquito en la tabla credito_finiquito.
-            """
-            try:
-                # Si no se envía firmante, usamos el valor por defecto
-                firmante_final = firmante or "EVELYN YANETH GARCIA BAIRES"
-                
-                sql = text("""
-                    INSERT INTO credito_finiquito (credito_id, url_documento, monto_cancelado, fecha_generacion, firmante)
-                    VALUES (:credito_id, :url, :monto, :fecha, :firmante)
-                """)
-                
-                self.session.execute(sql, {
-                    "credito_id": credito_id,
-                    "url": url_documento,
-                    "monto": monto_cancelado,
-                    "fecha": datetime.datetime.now(),
-                    "firmante": firmante_final
-                })
-                self.session.commit()
-                logger.info(f"Registro de finiquito guardado para crédito {credito_id}")
-                return True
-            except Exception as e:
-                self.session.rollback()
-                logger.error(f"Error al insertar en credito_finiquito: {str(e)}")
-                raise        
+        """Registra la generación de un nuevo finiquito en la tabla credito_finiquito."""
+        try:
+            firmante_final = firmante or "EVELYN YANETH GARCIA BAIRES"
+            
+            sql = text("""
+                INSERT INTO credito_finiquito (credito_id, url_documento, monto_cancelado, fecha_generacion, firmante)
+                VALUES (:credito_id, :url, :monto, :fecha, :firmante)
+            """)
+            
+            self.session.execute(sql, {
+                "credito_id": credito_id,
+                "url": url_documento,
+                "monto": monto_cancelado,
+                "fecha": datetime.datetime.now(),
+                "firmante": firmante_final
+            })
+            self.session.commit()
+            logger.info(f"Registro de finiquito guardado para crédito {credito_id}")
+            return True
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Error al insertar en credito_finiquito: {str(e)}")
+            raise        
 
     def obtener_resumen_saldos_vista(self, credito_id):
-            """
-            Obtiene meses_pendientes, nivel_mora y saldo_total desde la vista saldos_totales.
-            """
-            sql = text("""
-                SELECT meses_pendientes, nivel_mora, saldo_total
-                FROM public.saldos_totales
-                WHERE credito_id = :credito_id
-                LIMIT 1
-            """)
-            try:
-                result = self.session.execute(sql, {"credito_id": credito_id}).fetchone()
-                if not result:
-                    return None
-                return {
-                    "meses_pendientes": int(result.meses_pendientes) if result.meses_pendientes is not None else 0,
-                    "nivel_mora": result.nivel_mora,
-                    "saldo_total": float(result.saldo_total) if result.saldo_total is not None else 0.0
-                }
-            except Exception as e:
-                logger.error(f"Error en obtener_resumen_saldos_vista: {str(e)}")
-                raise            
+        """Obtiene meses_pendientes, nivel_mora y saldo_total desde la vista saldos_totales."""
+        sql = text("""
+            SELECT meses_pendientes, nivel_mora, saldo_total
+            FROM public.saldos_totales
+            WHERE credito_id = :credito_id
+            LIMIT 1
+        """)
+        try:
+            result = self.session.execute(sql, {"credito_id": credito_id}).fetchone()
+            if not result:
+                return None
+            return {
+                "meses_pendientes": int(result.meses_pendientes) if result.meses_pendientes is not None else 0,
+                "nivel_mora": result.nivel_mora,
+                "saldo_total": float(result.saldo_total) if result.saldo_total is not None else 0.0
+            }
+        except Exception as e:
+            logger.error(f"Error en obtener_resumen_saldos_vista: {str(e)}")
+            raise            
     
     def reestructurar_credito_transaccion(self, creditos_origen_ids: list, datos_nuevo_credito: dict, observacion: str = None):
-        session = self.get_session()
+        """
+        Ejecuta la reestructuración usando la sesión unificada self.session.
+        """
         try:
             # 1. Obtener y validar todos los créditos origen
-            creditos_origen = session.query(Credito).filter(Credito.credito_id.in_(creditos_origen_ids)).all()
+            creditos_origen = self.session.query(Credito).filter(Credito.credito_id.in_(creditos_origen_ids)).all()
             
             if len(creditos_origen) != len(creditos_origen_ids):
                 raise ValueError("Uno o más créditos origen indicados no existen en la base de datos.")
 
-            # Tomamos la persona y vendedor del primer crédito (se asume pertenecen al mismo cliente)
             persona_id = creditos_origen[0].persona_id
             vendedor_id = creditos_origen[0].vendedor_id
             privado = creditos_origen[0].privado
 
-            # 2. Cancelar y cambiar estado jurídico de TODOS los créditos anteriores
+            # 2. Cancelar y cambiar estado jurídico de los créditos anteriores
             origen_str = ", ".join([f"#{c.credito_id}" for c in creditos_origen])
             for credito in creditos_origen:
                 credito.estado_juridico = 1
@@ -304,30 +302,29 @@ class BaseDatos:
                 estado_juridico=0,
                 observaciones=f"Crédito por reestructuración/consolidación de los créditos: {origen_str}."
             )
-            session.add(nuevo_credito)
-            session.flush() # Genera el credito_id para el nuevo crédito
+            self.session.add(nuevo_credito)
+            self.session.flush()
 
             # 4. Crear cabecera de la reestructuración
             reest_cabecera = CreditoReestructuracion(
                 credito_destino_id=nuevo_credito.credito_id,
                 observacion=observacion
             )
-            session.add(reest_cabecera)
-            session.flush()
+            self.session.add(reest_cabecera)
+            self.session.flush()
 
-            # 5. Insertar cada crédito origen en la tabla detalle
+            # 5. Insertar detalle de los créditos de origen
             for c_origen in creditos_origen:
                 detalle = CreditoReestructuracionDetalle(
                     reestructuracion_id=reest_cabecera.reestructuracion_id,
                     credito_origen_id=c_origen.credito_id
                 )
-                session.add(detalle)
+                self.session.add(detalle)
 
-            session.commit()
+            self.session.commit()
             return nuevo_credito, reest_cabecera
 
         except Exception as e:
-            session.rollback()
+            self.session.rollback()
+            logger.error(f"Error en transacción de reestructuración: {str(e)}")
             raise e
-        finally:
-            session.close()            
