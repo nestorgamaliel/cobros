@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Numeric, DateTime, Boolean, func
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Numeric, DateTime, Boolean, func, Text
 from sqlalchemy.orm import relationship, declarative_base
 import datetime
 
@@ -103,3 +103,28 @@ class Finiquito(Base):
     url_documento = Column(String(500), nullable=False)
     firmante = Column(String(200)) # Guardamos quién firmó en ese momento   
     monto_cancelado = Column(Numeric(10, 2), nullable=False)    
+
+
+class CreditoReestructuracion(Base):
+    __tablename__ = 'credito_reestructuracion'
+
+    reestructuracion_id = Column(Integer, primary_key=True, autoincrement=True)
+    credito_destino_id = Column(Integer, ForeignKey('credito.credito_id'), nullable=False)
+    fecha_reestructuracion = Column(DateTime, default=func.now(), nullable=False)
+    observacion = Column(Text, nullable=True)
+
+    # Relación al nuevo crédito generado
+    credito_destino = relationship("Credito", foreign_keys=[credito_destino_id])
+    # Relación uno-a-muchos hacia los créditos de origen que se unificaron
+    creditos_origen = relationship("CreditoReestructuracionDetalle", back_populates="reestructuracion")
+
+class CreditoReestructuracionDetalle(Base):
+    __tablename__ = 'credito_reestructuracion_detalle'
+
+    detalle_id = Column(Integer, primary_key=True, autoincrement=True)
+    reestructuracion_id = Column(Integer, ForeignKey('credito_reestructuracion.reestructuracion_id'), nullable=False)
+    credito_origen_id = Column(Integer, ForeignKey('credito.credito_id'), nullable=False)
+
+    # Relaciones de navegación
+    reestructuracion = relationship("CreditoReestructuracion", back_populates="creditos_origen")
+    credito_origen = relationship("Credito", foreign_keys=[credito_origen_id])    

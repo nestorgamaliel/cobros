@@ -17,6 +17,8 @@ vendedor_service = None
 finiquito_service = None 
 estado_cuenta_service = None
 saldo_diario_service = None
+reestructuracion_service = None
+
 
 def create_app(test_config=None):
     """Factory para crear y configurar la aplicación Flask."""
@@ -47,7 +49,8 @@ def create_app(test_config=None):
             vendedor_service, 
             finiquito_service,
             estado_cuenta_service,
-            saldo_diario_service
+            saldo_diario_service,
+            reestructuracion_service
         ),
         url_prefix='/api'
     )
@@ -67,7 +70,9 @@ def create_app(test_config=None):
 def inicializar_servicios():
     """Inicializa los servicios centralizados inyectando las dependencias necesarias."""
     global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service, saldo_diario_service
-    
+    global reestructuracion_service
+
+
     try:
         from app.services.db_service import BaseDatos
         from app.services.pdf_service import GeneradorRecibos
@@ -78,6 +83,7 @@ def inicializar_servicios():
         from app.services.finiquito_service import FiniquitoService
         from app.services.estado_cuenta_service import EstadoCuentaService
         from app.services.saldo_diario_service import ServicioSaldoDiario
+        from app.services.reestructuracion_service import ReestructuracionService
 
         # 1. Servicios base de infraestructura
         db_service = BaseDatos(settings.SQLALCHEMY_DATABASE_URI)
@@ -91,7 +97,8 @@ def inicializar_servicios():
         finiquito_service = FiniquitoService(db_service)
         estado_cuenta_service = EstadoCuentaService(db_service)
         saldo_diario_service = ServicioSaldoDiario(db_service)
-        
+        reestructuracion_service = ReestructuracionService(db_service)
+
         logger.info("Todos los servicios han sido cargados correctamente")
         
     except Exception as e:

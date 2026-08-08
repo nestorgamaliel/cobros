@@ -7,7 +7,7 @@ from app.services.notificacion_service import NotificacionService
 
 # Importación de DTOs para validación
 from app.schemas.persona import PersonaCreate, PersonaUpdate
-from app.schemas.credito import CreditoCreate, ConsultaSaldoDiarioRequest
+from app.schemas.credito import CreditoCreate, ConsultaSaldoDiarioRequest, ReestructuracionCreate
 from app.schemas.pago import PagoCreate
 
 # Importación de servicios de comunicación
@@ -23,7 +23,8 @@ def init_routes(
     servicio_vendedores, 
     servicio_finiquitos, 
     servicio_estado_cuenta,
-    servicio_saldo_diario=None
+    servicio_saldo_diario=None,       # <--- Se agregó la coma faltante
+    servicio_reestructuracion=None
 ):
     """
     Inyecta los servicios y registra las rutas dentro de un Blueprint.
@@ -126,7 +127,7 @@ def init_routes(
     @api_blueprint.route('/creditos/saldo-diario', methods=['POST'])
     def consultar_saldo_diario():
         """
-        NUEVO ENDPOINT: Calcula el desglose de intereses y capital diario.
+        Calcula el desglose de intereses y capital diario.
         """
         if not servicio_saldo_diario:
             return jsonify({"error": "El ServicioSaldoDiario no fue inicializado en el servidor"}), 500
@@ -151,6 +152,28 @@ def init_routes(
         except Exception as ex:
             logger.error(f"Error interno en POST /creditos/saldo-diario: {str(ex)}")
             return jsonify({"error": "Error interno del servidor", "detalle": str(ex)}), 500
+
+    # --- RUTA DE REESTRUCTURACIÓN DE CRÉDITOS ---
+    @api_blueprint.route('/credito/reestructurar', methods=['POST'])
+    def reestructurar_credito():
+        if not servicio_reestructuracion:
+            return jsonify({"error": "El Servicio de Reestructuración no está inicializado"}), 500
+
+        try:
+            datos_validados = ReestructuracionCreate(**request.get_json())
+            resultado, error = servicio_reestructuracion.reestructurar_credito(datos_validados)
+
+            if error:
+                return jsonify({'error': error}), 400
+
+            return jsonify({
+                'mensaje': 'Crédito reestructurado exitosamente',
+                'datos': resultado
+            }), 201
+
+        except Exception as e:
+            logger.error(f"Error en POST /credito/reestructurar: {str(e)}")
+            return jsonify({'error': f"Datos de entrada inválidos: {str(e)}"}), 400
 
     # --- RUTAS DE PAGOS Y RECIBOS ---
     @api_blueprint.route('/pago', methods=['POST'])

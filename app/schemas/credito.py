@@ -3,6 +3,8 @@ from datetime import date
 from typing import Optional
 from decimal import Decimal
 from .base import BaseSchema # Importas tu nueva base
+from typing import List
+
 
 class CreditoBase(BaseSchema):
     persona_id: int
@@ -46,3 +48,14 @@ class ConsultaSaldoDiarioRequest(BaseModel):
     tasa_anual: float = Field(..., description="Tasa de interés anual fija (ej. 0.80 para 80%)")
     tasa_mora_anual: float = Field(..., description="Tasa de interés de mora anual (ej. 0.05 para 5%)")
     fecha_corte: Optional[date] = Field(None, description="Fecha de corte opcional (YYYY-MM-DD), por defecto hoy")        
+
+class ReestructuracionCreate(BaseModel):
+    creditos_origen_ids: List[int] = Field(..., min_items=1, description="Lista de IDs de créditos que se consolidarán/reestructurarán")
+    tasa_interes_nueva: Decimal = Field(..., ge=0)
+    numero_cuotas_nuevo: int = Field(..., gt=0)
+    dia_pago_nuevo: int = Field(..., ge=1, le=31)
+    monto_solicitado_nuevo: Decimal = Field(..., gt=0)
+    cuota_nueva: Decimal = Field(..., gt=0)
+    total_credito_proyectado_nuevo: Decimal = Field(..., gt=0)
+    observacion: Optional[str] = None
+    monto_colocado_nuevo: Optional[Decimal] = None    

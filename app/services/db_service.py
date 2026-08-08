@@ -265,3 +265,69 @@ class BaseDatos:
             except Exception as e:
                 logger.error(f"Error en obtener_resumen_saldos_vista: {str(e)}")
                 raise            
+    
+    def reestructurar_credito_transaccion(self, creditos_origen_ids: list, datos_nuevo_credito: dict, observacion: str = None):
+        session = self.get_session()
+        try:
+            # 1. Obtener y validar todos los créditos origen
+            creditos_origen = session.query(Credito).filter(Credito.credito_id.in_(creditos_origen_ids)).all()
+            
+            if len(creditos_origen) != len(creditos_origen_ids):
+                raise ValueError("Uno o más créditos origen indicados no existen en la base de datos.")
+
+            # Tomamos la persona y vendedor del primer crédito (se asume pertenecen al mismo cliente)
+            persona_id = creditos_origen[0].persona_id
+            vendedor_id = creditos_origen[0].vendedor_id
+            privado = creditos_origen[0].privado
+
+            # 2. Cancelar y cambiar estado jurídico de TODOS los créditos anteriores
+            origen_str = ", ".join([f"#{c.credito_id}" for c in creditos_origen])
+            for credito in creditos_origen:
+                credito.estado_juridico = 1
+                credito.cancelado = True
+
+            # 3. Crear el nuevo crédito consolidado
+            nuevo_credito = Credito(
+                persona_id=persona_id,
+                vendedor_id=vendedor_id,
+                fecha=datos_nuevo_credito['fecha'],
+                tasa_interes=datos_nuevo_credito['tasa_interes'],
+                monto_solicitado=datos_nuevo_credito['monto_solicitado'],
+                numero_cuotas=datos_nuevo_credito['numero_cuotas'],
+                monto_colocado=datos_nuevo_credito.get('monto_colocado', datos_nuevo_credito['monto_solicitado']),
+                monto_intereses=datos_nuevo_credito['monto_intereses'],
+                total_credito_proyectado=datos_nuevo_credito['total_credito_proyectado'],
+                cuota=datos_nuevo_credito['cuota'],
+                dia_pago=datos_nuevo_credito['dia_pago'],
+                cancelado=False,
+                privado=privado,
+                estado_juridico=0,
+                observaciones=f"Crédito por reestructuración/consolidación de los créditos: {origen_str}."
+            )
+            session.add(nuevo_credito)
+            session.flush() # Genera el credito_id para el nuevo crédito
+
+            # 4. Crear cabecera de la reestructuración
+            reest_cabecera = CreditoReestructuracion(
+                credito_destino_id=nuevo_credito.credito_id,
+                observacion=observacion
+            )
+            session.add(reest_cabecera)
+            session.flush()
+
+            # 5. Insertar cada crédito origen en la tabla detalle
+            for c_origen in creditos_origen:
+                detalle = CreditoReestructuracionDetalle(
+                    reestructuracion_id=reest_cabecera.reestructuracion_id,
+                    credito_origen_id=c_origen.credito_id
+                )
+                session.add(detalle)
+
+            session.commit()
+            return nuevo_credito, reest_cabecera
+
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()            
