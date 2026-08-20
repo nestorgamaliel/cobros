@@ -95,7 +95,7 @@ class GeneradorRecibos(GeneradorDocumentos):
         credito_info = [
             ["INFORMACIÓN DEL CRÉDITO"],
             [f"Crédito ID: {credito.credito_id}", f"Fecha de inicio: {fecha_credito}"],
-            [f"Día de pago: {credito.dia_pago}", f"Cuota: ${credito.cuota:,.2f}", ""]
+            [f"Día de pago: {credito.dia_pago}", f"Cuota: ${credito.cuota:,.2f}"]
         ]
         t_credito = Table(credito_info, colWidths=[225, 225])
         t_credito.setStyle(TableStyle([('BACKGROUND', (0, 0), (1, 0), colors.lightgrey), ('SPAN', (0, 0), (1, 0)), ('ALIGN', (0, 0), (1, 0), 'CENTER'), ('GRID', (0, 1), (1, -1), 1, colors.black), ('BOX', (0, 0), (1, -1), 1, colors.black)]))
