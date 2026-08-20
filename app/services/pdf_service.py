@@ -95,8 +95,7 @@ class GeneradorRecibos(GeneradorDocumentos):
         credito_info = [
             ["INFORMACIÓN DEL CRÉDITO"],
             [f"Crédito ID: {credito.credito_id}", f"Fecha de inicio: {fecha_credito}"],
-            [f"Monto total: ${credito.total_credito_proyectado:,.2f}", f"Día de pago: {credito.dia_pago}"],
-            [f"Cuota: ${credito.cuota:,.2f}", ""]
+            [f"Día de pago: {credito.dia_pago}", f"Cuota: ${credito.cuota:,.2f}", ""]
         ]
         t_credito = Table(credito_info, colWidths=[225, 225])
         t_credito.setStyle(TableStyle([('BACKGROUND', (0, 0), (1, 0), colors.lightgrey), ('SPAN', (0, 0), (1, 0)), ('ALIGN', (0, 0), (1, 0), 'CENTER'), ('GRID', (0, 1), (1, -1), 1, colors.black), ('BOX', (0, 0), (1, -1), 1, colors.black)]))
@@ -107,7 +106,6 @@ class GeneradorRecibos(GeneradorDocumentos):
         pago_info = [["DETALLE DEL PAGO ACTUAL"], [f"Fecha de pago: {pago.fecha.strftime('%d/%m/%Y')}", f"Monto pagado: ${pago.monto:,.2f}"]]
         if pago.intereses: pago_info.append(["", f"Intereses: ${pago.intereses:,.2f}"])
         if pago.multa: pago_info.append(["", f"Mora/Multa: ${pago.multa:,.2f}"])
-        pago_info.append(["", f"Saldo pendiente: ${saldo:,.2f}"])
         
         t_pago = Table(pago_info, colWidths=[225, 225])
         t_pago.setStyle(TableStyle([('BACKGROUND', (0, 0), (1, 0), colors.lightgrey), ('SPAN', (0, 0), (1, 0)), ('ALIGN', (0, 0), (1, 0), 'CENTER'), ('GRID', (0, 1), (1, -1), 1, colors.black)]))
