@@ -3,13 +3,15 @@ import os
 from flask import Flask
 from config import settings
 from app.utils.logger import setup_logger
-from .estado_cuenta_service import EstadoCuentaService
-from .estado_cuenta_diario_service import EstadoCuentaDiarioService
-from .saldo_diario_service import ServicioSaldoDiario
+
+# Importación de servicios
+from app.services.estado_cuenta_service import EstadoCuentaService
+from app.services.estado_cuenta_diario_service import EstadoCuentaDiarioService
+from app.services.saldo_diario_service import ServicioSaldoDiario
 
 logger = setup_logger(__name__)
 
-# Singletons para los servicios
+# Singletons globales
 db_service = None
 pdf_service = None
 pago_service = None
@@ -22,7 +24,9 @@ finiquito_service = None
 saldo_diario_service = None
 
 def inicializar_servicios():
-    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, estado_cuenta_service, estado_cuenta_diario_service, finiquito_service, saldo_diario_service
+    global db_service, pdf_service, pago_service, persona_service, credito_service
+    global vendedor_service, estado_cuenta_service, estado_cuenta_diario_service
+    global finiquito_service, saldo_diario_service
     
     try:
         from app.services import (
@@ -50,7 +54,7 @@ def inicializar_servicios():
         return True
         
     except Exception as e:
-        logger.error(f"Error fatal en inicialización de servicios: {str(e)}")
+        logger.error(f"Error fatal en inicialización de servicios: {str(e)}", exc_info=True)
         raise e
 
 def create_app(test_config=None):
@@ -66,7 +70,8 @@ def create_app(test_config=None):
     
     from app.api.routes import init_routes
     
-    global pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service, estado_cuenta_diario_service, saldo_diario_service
+    global pago_service, persona_service, credito_service, vendedor_service
+    global finiquito_service, estado_cuenta_service, estado_cuenta_diario_service, saldo_diario_service
 
     servicios_check = [
         pago_service, 
