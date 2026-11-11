@@ -30,7 +30,7 @@ def init_routes(
     servicio_estado_cuenta,
     servicio_saldo_diario=None,
     servicio_reestructuracion=None,
-    servicio_estado_cuenta_diario=None  # <--- Nuevo servicio inyectado desacoplado
+    servicio_estado_cuenta_diario=None
 ):
     """
     Inyecta los servicios y registra las rutas dentro de un Blueprint.
@@ -233,5 +233,3 @@ def init_routes(
             }), 201
             
         except Exception as e:
-            logger.error(f"Error en POST /generar-finiquito: {str(e)}")
-            return jsonify({'error': f"Error al procesar finiquito: {

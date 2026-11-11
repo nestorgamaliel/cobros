@@ -262,3 +262,13 @@ tree -I 'source|bin|venv|*pycache*' > estructura.txt
 # estado de cuenta
 https://cobros-608132114325.us-central1.run.app/api/credito/306/estado-cuenta
 
+
+
+# estado de cuenta diario
+POST https://cobros-608132114325.us-central1.run.app/api/credito/1/estado-cuenta-diario/pdf
+{
+  "tasa_anual": 0.20,
+  "tasa_mora_anual": 0.05,
+  "fecha_corte": "2026-11-10"
+}
+
