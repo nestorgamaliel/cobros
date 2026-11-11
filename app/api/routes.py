@@ -187,7 +187,7 @@ def init_routes(
         try:
             datos_validados = PagoCreate(**request.get_json())
             
-            # Mantiene los 6 valores de retorno que espera tu frontend/Postman
+            # Mantiene los 6 valores de retorno que espera el cliente
             ruta, nombre, url, pago_obj, credito_obj, persona_obj = servicio_pagos.registrar_pago(datos_validados)            
             
             if not ruta:
@@ -233,3 +233,81 @@ def init_routes(
             }), 201
             
         except Exception as e:
+            logger.error(f"Error en POST /generar-finiquito: {str(e)}")
+            return jsonify({'error': f"Error al procesar finiquito: {str(e)}"}), 500
+
+    @api_blueprint.route('/credito/<int:credito_id>/estado-cuenta', methods=['GET'])
+    def generar_estado_cuenta(credito_id):
+        """
+        Estado de cuenta tradicional/estándar.
+        """
+        try:
+            logger.info(f"Generando estado de cuenta tradicional para crédito ID: {credito_id}")
+            url, error = servicio_estado_cuenta.generar_estado_cuenta_completo(credito_id)
+            
+            if error:
+                return jsonify({'error': error}), 400
+                
+            return jsonify({
+                'mensaje': 'Estado de cuenta generado exitosamente',
+                'url_pdf': url,
+                'credito_id': credito_id
+            }), 200
+            
+        except Exception as e:
+            logger.error(f"Error en GET /credito/{credito_id}/estado-cuenta: {str(e)}")
+            return jsonify({'error': 'Error interno al generar el documento'}), 500
+
+    @api_blueprint.route('/credito/<int:credito_id>/estado-cuenta-diario/pdf', methods=['POST'])
+    def generar_estado_cuenta_diario_pdf(credito_id):
+        """
+        Genera un documento PDF desacoplado con el desglose detallado por saldo diario.
+        """
+        if not servicio_estado_cuenta_diario:
+            return jsonify({"error": "El ServicioEstadoCuentaDiario no está inicializado en el servidor"}), 500
+
+        try:
+            data = request.get_json() or {}
+            if 'credito_id' not in data:
+                data['credito_id'] = credito_id
+                
+            req = EstadoCuentaDiarioPDFRequest(**data)
+        except Exception as e:
+            logger.error(f"Error en validación POST /credito/{credito_id}/estado-cuenta-diario/pdf: {str(e)}")
+            return jsonify({"error": "Parámetros de entrada inválidos", "detalle": str(e)}), 400
+
+        try:
+            url, error = servicio_estado_cuenta_diario.generar_pdf_estado_cuenta_diario(
+                credito_id=credito_id,
+                tasa_anual=req.tasa_anual,
+                tasa_mora_anual=req.tasa_mora_anual,
+                fecha_corte=req.fecha_corte
+            )
+            
+            if error:
+                return jsonify({'error': error}), 400
+                
+            return jsonify({
+                'mensaje': 'Estado de cuenta por saldo diario generado exitosamente',
+                'url_pdf': url,
+                'credito_id': credito_id
+            }), 200
+            
+        except Exception as e:
+            logger.error(f"Error en POST /credito/{credito_id}/estado-cuenta-diario/pdf: {str(e)}")
+            return jsonify({'error': 'Error interno al generar el documento de saldo diario'}), 500
+
+    # --- CRON / TAREAS PROGRAMADAS ---
+    @api_blueprint.route('/cron/reporte-diario', methods=['POST'])
+    def ejecutar_reporte_diario():
+        try:
+            resultado = servicio_creditos.enviar_reporte_diario_vencimientos()
+            return jsonify({
+                'success': True, 
+                'enviado': bool(resultado)
+            }), 200
+        except Exception as e:
+            logger.error(f"Error en cron reporte-diario: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    return api_blueprint
