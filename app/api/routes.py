@@ -7,7 +7,12 @@ from app.services.notificacion_service import NotificacionService
 
 # Importación de DTOs para validación
 from app.schemas.persona import PersonaCreate, PersonaUpdate
-from app.schemas.credito import CreditoCreate, ConsultaSaldoDiarioRequest, ReestructuracionCreate
+from app.schemas.credito import (
+    CreditoCreate, 
+    ConsultaSaldoDiarioRequest, 
+    ReestructuracionCreate,
+    EstadoCuentaDiarioPDFRequest
+)
 from app.schemas.pago import PagoCreate
 
 # Importación de servicios de comunicación
@@ -23,12 +28,13 @@ def init_routes(
     servicio_vendedores, 
     servicio_finiquitos, 
     servicio_estado_cuenta,
-    servicio_saldo_diario=None,       # <--- Se agregó la coma faltante
-    servicio_reestructuracion=None
+    servicio_saldo_diario=None,
+    servicio_reestructuracion=None,
+    servicio_estado_cuenta_diario=None  # <--- Nuevo servicio inyectado desacoplado
 ):
     """
     Inyecta los servicios y registra las rutas dentro de un Blueprint.
-    Mantiene compatibilidad total con la lógica previa e integra el cálculo de saldo diario.
+    Mantiene compatibilidad total con la lógica previa e integra el estado de cuenta por saldo diario.
     """
     api_blueprint = Blueprint('api', __name__)
 
@@ -127,7 +133,7 @@ def init_routes(
     @api_blueprint.route('/creditos/saldo-diario', methods=['POST'])
     def consultar_saldo_diario():
         """
-        Calcula el desglose de intereses y capital diario.
+        Calcula el desglose de intereses y capital diario en formato JSON.
         """
         if not servicio_saldo_diario:
             return jsonify({"error": "El ServicioSaldoDiario no fue inicializado en el servidor"}), 500
@@ -211,7 +217,7 @@ def init_routes(
             return send_file(ruta_recibo, as_attachment=True)
         return jsonify({'error': 'Archivo no encontrado'}), 404
 
-    # --- DOCUMENTOS (FINIQUITOS Y ESTADO DE CUENTA) ---
+    # --- DOCUMENTOS (FINIQUITOS, ESTADO DE CUENTA TRADICIONAL Y ESTADO DE CUENTA DIARIO) ---
     @api_blueprint.route('/credito/<int:credito_id>/generar-finiquito', methods=['POST'])
     def generar_finiquito(credito_id):
         try:
@@ -228,38 +234,4 @@ def init_routes(
             
         except Exception as e:
             logger.error(f"Error en POST /generar-finiquito: {str(e)}")
-            return jsonify({'error': f"Error al procesar finiquito: {str(e)}"}), 500
-
-    @api_blueprint.route('/credito/<int:credito_id>/estado-cuenta', methods=['GET'])
-    def generar_estado_cuenta(credito_id):
-        try:
-            logger.info(f"Generando estado de cuenta para crédito ID: {credito_id}")
-            url, error = servicio_estado_cuenta.generar_estado_cuenta_completo(credito_id)
-            
-            if error:
-                return jsonify({'error': error}), 400
-                
-            return jsonify({
-                'mensaje': 'Estado de cuenta generado exitosamente',
-                'url_pdf': url,
-                'credito_id': credito_id
-            }), 200
-            
-        except Exception as e:
-            logger.error(f"Error en GET /credito/{credito_id}/estado-cuenta: {str(e)}")
-            return jsonify({'error': 'Error interno al generar el documento'}), 500
-
-    # --- CRON / TAREAS PROGRAMADAS ---
-    @api_blueprint.route('/cron/reporte-diario', methods=['POST'])
-    def ejecutar_reporte_diario():
-        try:
-            resultado = servicio_creditos.enviar_reporte_diario_vencimientos()
-            return jsonify({
-                'success': True, 
-                'enviado': bool(resultado)
-            }), 200
-        except Exception as e:
-            logger.error(f"Error en cron reporte-diario: {str(e)}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
-    return api_blueprint
+            return jsonify({'error': f"Error al procesar finiquito: {

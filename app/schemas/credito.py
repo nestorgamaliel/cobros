@@ -59,3 +59,8 @@ class ReestructuracionCreate(BaseModel):
     total_credito_proyectado_nuevo: Decimal = Field(..., gt=0)
     observacion: Optional[str] = None
     monto_colocado_nuevo: Optional[Decimal] = None    
+
+class EstadoCuentaDiarioPDFRequest(BaseModel):
+    tasa_anual: float = Field(..., gt=0, description="Tasa de interés anual (ej. 0.20 para 20%)")
+    tasa_mora_anual: Optional[float] = Field(default=0.05, ge=0, description="Tasa de mora anual (ej. 0.05 para 5%)")
+    fecha_corte: Optional[date] = Field(default=None, description="Fecha de corte (YYYY-MM-DD)")    

@@ -388,3 +388,173 @@ class GeneradorEstadosCuenta(GeneradorDocumentos):
             
             url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "estados_cuenta")
             return ruta_archivo, nombre_archivo, url_publica
+
+
+class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
+    """Especializada en generar estados de cuenta detallados por saldo diario para Lender Finanzas."""
+
+    def generar_pdf_saldo_diario(self, datos_desglose, persona, credito):
+        config = self.obtener_configuracion_sucursal(credito.privado)
+
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer, 
+            pagesize=letter, 
+            rightMargin=36, 
+            leftMargin=36, 
+            topMargin=36, 
+            bottomMargin=36
+        )
+        styles = getSampleStyleSheet()
+        
+        title_style = ParagraphStyle(
+            'DocTitle', parent=styles['Title'], fontSize=15, leading=18, alignment=0, textColor=colors.HexColor('#2C3E50')
+        )
+        cell_style = ParagraphStyle(
+            'TableCell', parent=styles['Normal'], fontSize=7.5, leading=9
+        )
+        cell_header_style = ParagraphStyle(
+            'TableHeaderCell', parent=styles['Normal'], fontSize=8, leading=10, textColor=colors.whitesmoke, fontName='Helvetica-Bold', alignment=1
+        )
+        
+        elements = []
+
+        # 1. Encabezado y Logo
+        if os.path.exists(config["logo"]):
+            logo = Image(config["logo"], width=config["ancho"]*inch, height=0.8*inch)
+            t_head = Table([[logo, Paragraph("<b>ESTADO DE CUENTA - SALDO DIARIO</b><br/><font size=8 color='#7F8C8D'>Desglose de amortizaciones e intereses a la fecha</font>", title_style)]], colWidths=[2.5*inch, 4.9*inch])
+            t_head.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('ALIGN', (0,0), (0,0), 'LEFT')]))
+            elements.append(t_head)
+        else:
+            elements.append(Paragraph("<b>ESTADO DE CUENTA - SALDO DIARIO</b>", title_style))
+        
+        elements.append(Spacer(1, 15))
+
+        # 2. Información General
+        tasas = datos_desglose.get("tasas_aplicadas", {})
+        dui_val = getattr(persona, 'dui', 'N/A')
+        info_general = [
+            [
+                Paragraph(f"<b>Cliente:</b> {datos_desglose.get('cliente', 'N/A')}", cell_style),
+                Paragraph(f"<b>Crédito ID:</b> {credito.credito_id}", cell_style),
+                Paragraph(f"<b>Fecha Corte:</b> {datos_desglose.get('fecha_corte', '')}", cell_style)
+            ],
+            [
+                Paragraph(f"<b>DUI:</b> {dui_val}", cell_style),
+                Paragraph(f"<b>Monto Otorgado:</b> ${datos_desglose.get('monto_otorgado', 0.0):,.2f}", cell_style),
+                Paragraph(f"<b>Tasa Anual:</b> {tasas.get('tasa_anual_porcentaje', 0.0)}%", cell_style)
+            ],
+            [
+                Paragraph(f"<b>Fecha Inicio:</b> {datos_desglose.get('fecha_inicio', '')}", cell_style),
+                Paragraph(f"<b>Día de Pago:</b> {credito.dia_pago}", cell_style),
+                Paragraph(f"<b>Tasa Mora Anual:</b> {tasas.get('tasa_mora_anual_porcentaje', 0.0)}%", cell_style)
+            ]
+        ]
+        t_info = Table(info_general, colWidths=[2.6*inch, 2.4*inch, 2.4*inch])
+        t_info.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8F9FA')),
+            ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#BDC3C7')),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#ECF0F1')),
+            ('PADDING', (0,0), (-1,-1), 5),
+        ]))
+        elements.append(t_info)
+        elements.append(Spacer(1, 15))
+
+        # 3. Tabla de Amortización por Tramos
+        headers = [
+            Paragraph("Período / Rango", cell_header_style),
+            Paragraph("Días", cell_header_style),
+            Paragraph("Cap. Inicial", cell_header_style),
+            Paragraph("Int. Generado", cell_header_style),
+            Paragraph("Pago Recibido", cell_header_style),
+            Paragraph("Abono Int.", cell_header_style),
+            Paragraph("Abono Cap.", cell_header_style),
+            Paragraph("Cap. Resultante", cell_header_style)
+        ]
+        
+        tramos_table_data = [headers]
+        tramos = datos_desglose.get("desglose_tramos", [])
+
+        for t in tramos:
+            pago = t.get("pago_recibido", {})
+            f_inicio = datetime.datetime.strptime(t['fecha_inicio'], "%Y-%m-%d").strftime("%d/%m/%Y")
+            f_fin = datetime.datetime.strptime(t['fecha_fin'], "%Y-%m-%d").strftime("%d/%m/%Y")
+            
+            row = [
+                Paragraph(f"{f_inicio} al {f_fin}", cell_style),
+                Paragraph(str(t['dias_transcurridos']), ParagraphStyle('C', parent=cell_style, alignment=1)),
+                Paragraph(f"${t['capital_inicial']:,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
+                Paragraph(f"${t['interes_generado']:,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
+                Paragraph(f"${pago.get('monto', 0.0):,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
+                Paragraph(f"${pago.get('cobertura_interes', 0.0):,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
+                Paragraph(f"${pago.get('abono_capital', 0.0):,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
+                Paragraph(f"${t['capital_resultante']:,.2f}", ParagraphStyle('R', parent=cell_style, fontName='Helvetica-Bold', alignment=2))
+            ]
+            tramos_table_data.append(row)
+
+        t_tramos = Table(tramos_table_data, colWidths=[1.4*inch, 0.4*inch, 0.9*inch, 0.9*inch, 0.9*inch, 0.9*inch, 1.0*inch, 1.0*inch])
+        
+        t_style = [
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2C3E50')),
+            ('ALIGN', (0,0), (-1,0), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#BDC3C7')),
+            ('PADDING', (0,0), (-1,-1), 4),
+        ]
+        for idx in range(1, len(tramos_table_data)):
+            if idx % 2 == 0:
+                t_style.append(('BACKGROUND', (0, idx), (-1, idx), colors.HexColor('#F8F9FA')))
+
+        t_tramos.setStyle(TableStyle(t_style))
+        elements.append(t_tramos)
+        elements.append(Spacer(1, 15))
+
+        # 4. Tramo Acumulado y Resumen Final
+        resumen = datos_desglose.get("resumen_saldo", {})
+        tramo_act = datos_desglose.get("tramo_actual", {})
+        
+        f_act_inc = datetime.datetime.strptime(tramo_act['fecha_inicio'], "%Y-%m-%d").strftime("%d/%m/%Y")
+        f_act_fin = datetime.datetime.strptime(tramo_act['fecha_fin'], "%Y-%m-%d").strftime("%d/%m/%Y")
+
+        resumen_box = [
+            [
+                Paragraph("<b>TRAMO ACUMULADO ACTUAL</b>", ParagraphStyle('H', parent=styles['Normal'], fontSize=8.5, textColor=colors.HexColor('#2C3E50'), fontName='Helvetica-Bold')),
+                Paragraph("<b>RESUMEN DE SALDO A LA FECHA</b>", ParagraphStyle('H', parent=styles['Normal'], fontSize=8.5, textColor=colors.HexColor('#2C3E50'), fontName='Helvetica-Bold'))
+            ],
+            [
+                Paragraph(f"• Rango: {f_act_inc} al {f_act_fin}<br/>"
+                          f"• Días transcurridos: {tramo_act.get('dias_transcurridos', 0)} días<br/>"
+                          f"• Capital vigente: ${tramo_act.get('capital_vigente', 0.0):,.2f}<br/>"
+                          f"• Interés acumulado tramo: ${tramo_act.get('interes_generado', 0.0):,.2f}", cell_style),
+                Paragraph(f"<b>Capital Pendiente:</b> ${resumen.get('capital_pendiente', 0.0):,.2f}<br/>"
+                          f"<b>Interés Acumulado Pendiente:</b> ${resumen.get('interes_acumulado_pendiente', 0.0):,.2f}<br/>"
+                          f"<font size=9.5 color='#C0392B'><b>SALDO TOTAL REAL: ${resumen.get('saldo_total_real', 0.0):,.2f}</b></font>", cell_style)
+            ]
+        ]
+
+        t_resumen = Table(resumen_box, colWidths=[3.7*inch, 3.7*inch])
+        t_resumen.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#EAEDED')),
+            ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#BDC3C7')),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('PADDING', (0,0), (-1,-1), 6),
+            ('LINEBELOW', (0,0), (0,0), 1, colors.HexColor('#BDC3C7')),
+            ('LINEBELOW', (1,0), (1,0), 1, colors.HexColor('#BDC3C7')),
+        ]))
+        elements.append(t_resumen)
+
+        # 5. Pie de página
+        elements.append(Spacer(1, 15))
+        elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceBefore=5, spaceAfter=5))
+        fecha_emision = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        elements.append(Paragraph(f"Este documento es un estado de cuenta informativo de saldo diario emitido el {fecha_emision}", styles.get('PiePagina', styles['Normal'])))
+
+        doc.build(elements)
+        nombre_archivo = f"estado_cuenta_diario_{credito.credito_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
+
+        with open(ruta_archivo, 'wb') as f:
+            f.write(buffer.getvalue())
+
+        url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "estados_cuenta_diarios")
+        return ruta_archivo, nombre_archivo, url_publica    

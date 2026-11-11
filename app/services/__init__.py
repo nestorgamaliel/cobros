@@ -4,7 +4,8 @@ from flask import Flask
 from config import settings
 from app.utils.logger import setup_logger
 from .estado_cuenta_service import EstadoCuentaService
-from .saldo_diario_service import ServicioSaldoDiario  # <--- 1. Importar Clase
+from .estado_cuenta_diario_service import EstadoCuentaDiarioService
+from .saldo_diario_service import ServicioSaldoDiario
 
 logger = setup_logger(__name__)
 
@@ -16,11 +17,12 @@ persona_service = None
 credito_service = None
 vendedor_service = None
 estado_cuenta_service = None
+estado_cuenta_diario_service = None
 finiquito_service = None
-saldo_diario_service = None  # <--- 2. Variable Global
+saldo_diario_service = None
 
 def inicializar_servicios():
-    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, estado_cuenta_service, finiquito_service, saldo_diario_service
+    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, estado_cuenta_service, estado_cuenta_diario_service, finiquito_service, saldo_diario_service
     
     try:
         from app.services import (
@@ -38,8 +40,9 @@ def inicializar_servicios():
         vendedor_service = ServicioVendedores(db_service)
         
         estado_cuenta_service = EstadoCuentaService(db_service)
+        estado_cuenta_diario_service = EstadoCuentaDiarioService(db_service)
         finiquito_service = ServicioFiniquitos(db_service)
-        saldo_diario_service = ServicioSaldoDiario(db_service)  # <--- 3. Instanciar Servicio
+        saldo_diario_service = ServicioSaldoDiario(db_service)
 
         pago_service = ServicioPagos(db_service, pdf_service)
 
@@ -63,7 +66,7 @@ def create_app(test_config=None):
     
     from app.api.routes import init_routes
     
-    global pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service, saldo_diario_service
+    global pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service, estado_cuenta_diario_service, saldo_diario_service
 
     servicios_check = [
         pago_service, 
@@ -72,7 +75,8 @@ def create_app(test_config=None):
         vendedor_service, 
         finiquito_service, 
         estado_cuenta_service,
-        saldo_diario_service  # <--- 4. Agregar a la verificación
+        estado_cuenta_diario_service,
+        saldo_diario_service
     ]
 
     logger.info(f"Verificando servicios para rutas: {[s is not None for s in servicios_check]}")
@@ -85,7 +89,8 @@ def create_app(test_config=None):
             vendedor_service,
             finiquito_service,     
             estado_cuenta_service,
-            saldo_diario_service  # <--- 5. Pasar a init_routes
+            servicio_saldo_diario=saldo_diario_service,
+            servicio_estado_cuenta_diario=estado_cuenta_diario_service
         )
         app.register_blueprint(api_bp, url_prefix='/api')
         logger.info("Blueprints registrados exitosamente")
@@ -97,6 +102,7 @@ def create_app(test_config=None):
         if not vendedor_service: missing.append("vendedor")
         if not finiquito_service: missing.append("finiquito")
         if not estado_cuenta_service: missing.append("estado_cuenta")
+        if not estado_cuenta_diario_service: missing.append("estado_cuenta_diario")
         if not saldo_diario_service: missing.append("saldo_diario")
         logger.error(f"No se pudieron registrar las rutas. Servicios faltantes: {missing}")
         
@@ -107,7 +113,7 @@ def create_app(test_config=None):
             'status': 'ok',
             'version': '3.1',
             'database': 'connected' if db_service else 'error',
-            'services': 'ready' if all([pago_service, persona_service]) else 'initializing'
+            'services': 'ready' if all([pago_service, persona_service, estado_cuenta_diario_service]) else 'initializing'
         }
     
     return app
@@ -117,3 +123,4 @@ def get_pago_service(): return pago_service
 def get_persona_service(): return persona_service
 def get_credito_service(): return credito_service
 def get_saldo_diario_service(): return saldo_diario_service
+def get_estado_cuenta_diario_service(): return estado_cuenta_diario_service
