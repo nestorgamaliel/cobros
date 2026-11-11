@@ -24,36 +24,52 @@ class EstadoCuentaDiarioService:
             self._saldo_diario_service = ServicioSaldoDiario(self.db)
         return self._saldo_diario_service
 
+    def _extraer_valor(self, objeto, clave_attr, valor_defecto=None):
+        """Helper universal para extraer valores de ORM, dict o tuplas."""
+        if objeto is None:
+            return valor_defecto
+        if isinstance(objeto, dict):
+            return objeto.get(clave_attr, valor_defecto)
+        return getattr(objeto, clave_attr, valor_defecto)
+
     def generar_pdf_estado_cuenta_diario(
         self, 
         credito_id: int, 
-        tasa_anual: float, 
+        tasa_anual: float = 0.20, 
         tasa_mora_anual: float = 0.05, 
         fecha_corte=None
     ):
         try:
-            # Normalizar fecha_corte si viene como string ISO o datetime.date
+            # 1. Normalización de fecha_corte
             if isinstance(fecha_corte, str):
-                fecha_corte = datetime.datetime.strptime(fecha_corte, "%Y-%m-%d").date()
+                try:
+                    fecha_corte = datetime.datetime.strptime(fecha_corte, "%Y-%m-%d").date()
+                except ValueError:
+                    fecha_corte = datetime.date.today()
+            elif not fecha_corte:
+                fecha_corte = datetime.date.today()
 
-            # 1. Obtener crédito
+            # 2. Obtener crédito de la BD
             credito = self.db.obtener_credito(credito_id)
             if not credito:
-                return None, f"Crédito {credito_id} no encontrado en la base de datos."
+                return None, f"No se encontró el crédito con ID {credito_id}."
 
-            # 2. Obtener persona asociada
-            persona_id = getattr(credito, 'persona_id', None)
+            # Extraer persona_id de forma segura
+            persona_id = self._extraer_valor(credito, 'persona_id')
             persona = self.db.obtener_persona(persona_id) if persona_id else None
 
-            # 3. Calcular el desglose por saldo diario
+            # 3. Calcular desglose de saldo diario
             desglose = self.saldo_diario_service.calcular_desglose_saldo_diario(
                 credito_id=credito_id,
-                tasa_anual=float(tasa_anual),
-                tasa_mora_anual=float(tasa_mora_anual),
+                tasa_anual=float(tasa_anual or 0.20),
+                tasa_mora_anual=float(tasa_mora_anual or 0.05),
                 fecha_corte=fecha_corte
             )
 
-            # 4. Generar el documento PDF
+            if not desglose:
+                return None, "No se pudo generar el desglose de saldo diario."
+
+            # 4. Generar el PDF
             logger.info(f"Generando documento PDF de saldo diario para crédito ID: {credito_id}")
             ruta_archivo, nombre_archivo, url_publica = self.generador_pdf.generar_pdf_saldo_diario(
                 datos_desglose=desglose,
@@ -64,5 +80,5 @@ class EstadoCuentaDiarioService:
             return url_publica, None
 
         except Exception as e:
-            logger.error(f"Fallo en generar_pdf_estado_cuenta_diario (Crédito {credito_id}): {str(e)}", exc_info=True)
-            return None, str(e)
+            logger.error(f"Error procesando crédito {credito_id} en EstadoCuentaDiarioService: {str(e)}", exc_info=True)
+            return None, f"Error al generar el estado de cuenta por saldo diario: {str(e)}"
