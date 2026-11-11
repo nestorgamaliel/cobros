@@ -402,14 +402,13 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
             return val.strftime("%d/%m/%Y")
         if isinstance(val, str):
             try:
-                # Intenta ISO formato YYYY-MM-DD
                 return datetime.datetime.strptime(val.split("T")[0], "%Y-%m-%d").strftime("%d/%m/%Y")
             except ValueError:
                 return val
         return str(val)
 
     def generar_pdf_saldo_diario(self, datos_desglose, persona, credito):
-        config = self.obtener_configuracion_sucursal(credito.privado)
+        config = self.obtener_configuracion_sucursal(getattr(credito, 'privado', 0))
 
         buffer = BytesIO()
         doc = SimpleDocTemplate(
@@ -434,14 +433,20 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         
         elements = []
 
-        # 1. Encabezado y Logo
+        # 1. Encabezado y Logo (Manejo defensivo de imagen)
+        logo_cargado = False
         logo_path = config.get("logo")
         if logo_path and os.path.exists(logo_path):
-            logo = Image(logo_path, width=config["ancho"]*inch, height=0.8*inch)
-            t_head = Table([[logo, Paragraph("<b>ESTADO DE CUENTA - SALDO DIARIO</b><br/><font size=8 color='#7F8C8D'>Desglose de amortizaciones e intereses a la fecha</font>", title_style)]], colWidths=[2.5*inch, 4.9*inch])
-            t_head.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('ALIGN', (0,0), (0,0), 'LEFT')]))
-            elements.append(t_head)
-        else:
+            try:
+                logo = Image(logo_path, width=config["ancho"]*inch, height=0.8*inch)
+                t_head = Table([[logo, Paragraph("<b>ESTADO DE CUENTA - SALDO DIARIO</b><br/><font size=8 color='#7F8C8D'>Desglose de amortizaciones e intereses a la fecha</font>", title_style)]], colWidths=[2.5*inch, 4.9*inch])
+                t_head.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('ALIGN', (0,0), (0,0), 'LEFT')]))
+                elements.append(t_head)
+                logo_cargado = True
+            except Exception as img_err:
+                logger.warning(f"No se pudo cargar la imagen del logo en PDF: {img_err}")
+
+        if not logo_cargado:
             elements.append(Paragraph("<b>ESTADO DE CUENTA - SALDO DIARIO</b>", title_style))
         
         elements.append(Spacer(1, 15))
@@ -450,10 +455,14 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         tasas = datos_desglose.get("tasas_aplicadas", {})
         dui_val = getattr(persona, 'dui', 'N/A') if persona else 'N/A'
         
+        # Extracción segura de ID de Crédito
+        cred_id = getattr(credito, 'credito_id', None) or getattr(credito, 'id', 'N/A')
+        dia_pago_val = getattr(credito, 'dia_pago', 'N/A')
+
         info_general = [
             [
                 Paragraph(f"<b>Cliente:</b> {datos_desglose.get('cliente', 'N/A')}", cell_style),
-                Paragraph(f"<b>Crédito ID:</b> {credito.credito_id}", cell_style),
+                Paragraph(f"<b>Crédito ID:</b> {cred_id}", cell_style),
                 Paragraph(f"<b>Fecha Corte:</b> {self._fmt_fecha(datos_desglose.get('fecha_corte'))}", cell_style)
             ],
             [
@@ -463,7 +472,7 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
             ],
             [
                 Paragraph(f"<b>Fecha Inicio:</b> {self._fmt_fecha(datos_desglose.get('fecha_inicio'))}", cell_style),
-                Paragraph(f"<b>Día de Pago:</b> {getattr(credito, 'dia_pago', 'N/A')}", cell_style),
+                Paragraph(f"<b>Día de Pago:</b> {dia_pago_val}", cell_style),
                 Paragraph(f"<b>Tasa Mora Anual:</b> {tasas.get('tasa_mora_anual_porcentaje', 0.0)}%", cell_style)
             ]
         ]
@@ -567,7 +576,7 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         elements.append(Paragraph(f"Este documento es un estado de cuenta informativo de saldo diario emitido el {fecha_emision}", styles.get('PiePagina', styles['Normal'])))
 
         doc.build(elements)
-        nombre_archivo = f"estado_cuenta_diario_{credito.credito_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        nombre_archivo = f"estado_cuenta_diario_{cred_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
         ruta_archivo = os.path.join(self.directorio_salida, nombre_archivo)
 
         with open(ruta_archivo, 'wb') as f:
