@@ -393,6 +393,21 @@ class GeneradorEstadosCuenta(GeneradorDocumentos):
 class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
     """Especializada en generar estados de cuenta detallados por saldo diario para Lender Finanzas."""
 
+    @staticmethod
+    def _fmt_fecha(val):
+        """Helper para parsear y formatear fechas de manera segura."""
+        if not val:
+            return "-"
+        if isinstance(val, (datetime.date, datetime.datetime)):
+            return val.strftime("%d/%m/%Y")
+        if isinstance(val, str):
+            try:
+                # Intenta ISO formato YYYY-MM-DD
+                return datetime.datetime.strptime(val.split("T")[0], "%Y-%m-%d").strftime("%d/%m/%Y")
+            except ValueError:
+                return val
+        return str(val)
+
     def generar_pdf_saldo_diario(self, datos_desglose, persona, credito):
         config = self.obtener_configuracion_sucursal(credito.privado)
 
@@ -420,8 +435,9 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         elements = []
 
         # 1. Encabezado y Logo
-        if os.path.exists(config["logo"]):
-            logo = Image(config["logo"], width=config["ancho"]*inch, height=0.8*inch)
+        logo_path = config.get("logo")
+        if logo_path and os.path.exists(logo_path):
+            logo = Image(logo_path, width=config["ancho"]*inch, height=0.8*inch)
             t_head = Table([[logo, Paragraph("<b>ESTADO DE CUENTA - SALDO DIARIO</b><br/><font size=8 color='#7F8C8D'>Desglose de amortizaciones e intereses a la fecha</font>", title_style)]], colWidths=[2.5*inch, 4.9*inch])
             t_head.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('ALIGN', (0,0), (0,0), 'LEFT')]))
             elements.append(t_head)
@@ -432,12 +448,13 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
 
         # 2. Información General
         tasas = datos_desglose.get("tasas_aplicadas", {})
-        dui_val = getattr(persona, 'dui', 'N/A')
+        dui_val = getattr(persona, 'dui', 'N/A') if persona else 'N/A'
+        
         info_general = [
             [
                 Paragraph(f"<b>Cliente:</b> {datos_desglose.get('cliente', 'N/A')}", cell_style),
                 Paragraph(f"<b>Crédito ID:</b> {credito.credito_id}", cell_style),
-                Paragraph(f"<b>Fecha Corte:</b> {datos_desglose.get('fecha_corte', '')}", cell_style)
+                Paragraph(f"<b>Fecha Corte:</b> {self._fmt_fecha(datos_desglose.get('fecha_corte'))}", cell_style)
             ],
             [
                 Paragraph(f"<b>DUI:</b> {dui_val}", cell_style),
@@ -445,8 +462,8 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
                 Paragraph(f"<b>Tasa Anual:</b> {tasas.get('tasa_anual_porcentaje', 0.0)}%", cell_style)
             ],
             [
-                Paragraph(f"<b>Fecha Inicio:</b> {datos_desglose.get('fecha_inicio', '')}", cell_style),
-                Paragraph(f"<b>Día de Pago:</b> {credito.dia_pago}", cell_style),
+                Paragraph(f"<b>Fecha Inicio:</b> {self._fmt_fecha(datos_desglose.get('fecha_inicio'))}", cell_style),
+                Paragraph(f"<b>Día de Pago:</b> {getattr(credito, 'dia_pago', 'N/A')}", cell_style),
                 Paragraph(f"<b>Tasa Mora Anual:</b> {tasas.get('tasa_mora_anual_porcentaje', 0.0)}%", cell_style)
             ]
         ]
@@ -477,18 +494,18 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
 
         for t in tramos:
             pago = t.get("pago_recibido", {})
-            f_inicio = datetime.datetime.strptime(t['fecha_inicio'], "%Y-%m-%d").strftime("%d/%m/%Y")
-            f_fin = datetime.datetime.strptime(t['fecha_fin'], "%Y-%m-%d").strftime("%d/%m/%Y")
+            f_inicio = self._fmt_fecha(t.get('fecha_inicio'))
+            f_fin = self._fmt_fecha(t.get('fecha_fin'))
             
             row = [
                 Paragraph(f"{f_inicio} al {f_fin}", cell_style),
-                Paragraph(str(t['dias_transcurridos']), ParagraphStyle('C', parent=cell_style, alignment=1)),
-                Paragraph(f"${t['capital_inicial']:,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
-                Paragraph(f"${t['interes_generado']:,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
+                Paragraph(str(t.get('dias_transcurridos', 0)), ParagraphStyle('C', parent=cell_style, alignment=1)),
+                Paragraph(f"${t.get('capital_inicial', 0.0):,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
+                Paragraph(f"${t.get('interes_generado', 0.0):,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
                 Paragraph(f"${pago.get('monto', 0.0):,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
                 Paragraph(f"${pago.get('cobertura_interes', 0.0):,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
                 Paragraph(f"${pago.get('abono_capital', 0.0):,.2f}", ParagraphStyle('R', parent=cell_style, alignment=2)),
-                Paragraph(f"${t['capital_resultante']:,.2f}", ParagraphStyle('R', parent=cell_style, fontName='Helvetica-Bold', alignment=2))
+                Paragraph(f"${t.get('capital_resultante', 0.0):,.2f}", ParagraphStyle('R', parent=cell_style, fontName='Helvetica-Bold', alignment=2))
             ]
             tramos_table_data.append(row)
 
@@ -509,12 +526,12 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         elements.append(t_tramos)
         elements.append(Spacer(1, 15))
 
-        # 4. Tramo Acumulado y Resumen Final
+        # 4. Tramo Acumulado Actual y Resumen Final
         resumen = datos_desglose.get("resumen_saldo", {})
         tramo_act = datos_desglose.get("tramo_actual", {})
         
-        f_act_inc = datetime.datetime.strptime(tramo_act['fecha_inicio'], "%Y-%m-%d").strftime("%d/%m/%Y")
-        f_act_fin = datetime.datetime.strptime(tramo_act['fecha_fin'], "%Y-%m-%d").strftime("%d/%m/%Y")
+        f_act_inc = self._fmt_fecha(tramo_act.get('fecha_inicio'))
+        f_act_fin = self._fmt_fecha(tramo_act.get('fecha_fin'))
 
         resumen_box = [
             [
@@ -557,4 +574,4 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
             f.write(buffer.getvalue())
 
         url_publica = self._subir_a_gcs(ruta_archivo, nombre_archivo, "estados_cuenta_diarios")
-        return ruta_archivo, nombre_archivo, url_publica    
+        return ruta_archivo, nombre_archivo, url_publica
