@@ -390,12 +390,12 @@ class GeneradorEstadosCuenta(GeneradorDocumentos):
             return ruta_archivo, nombre_archivo, url_publica
 
 
+
 class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
-    """Especializada en generar estados de cuenta detallados por saldo diario para Lender Finanzas."""
+    """Especializada en generar estados de cuenta detallados por saldo diario."""
 
     @staticmethod
     def _fmt_fecha(val):
-        """Helper para parsear y formatear fechas de manera segura."""
         if not val:
             return "-"
         if isinstance(val, (datetime.date, datetime.datetime)):
@@ -408,7 +408,9 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         return str(val)
 
     def generar_pdf_saldo_diario(self, datos_desglose, persona, credito):
-        config = self.obtener_configuracion_sucursal(getattr(credito, 'privado', 0))
+        # 1. Configuración de sucursal de forma segura
+        privado_val = getattr(credito, 'privado', 0) if credito else 0
+        config = self.obtener_configuracion_sucursal(privado_val)
 
         buffer = BytesIO()
         doc = SimpleDocTemplate(
@@ -422,7 +424,7 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         styles = getSampleStyleSheet()
         
         title_style = ParagraphStyle(
-            'DocTitle', parent=styles['Title'], fontSize=15, leading=18, alignment=0, textColor=colors.HexColor('#2C3E50')
+            'DocTitle', parent=styles['Title'], fontSize=14, leading=17, alignment=0, textColor=colors.HexColor('#2C3E50')
         )
         cell_style = ParagraphStyle(
             'TableCell', parent=styles['Normal'], fontSize=7.5, leading=9
@@ -433,35 +435,21 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         
         elements = []
 
-        # 1. Encabezado y Logo (Manejo defensivo de imagen)
-        logo_cargado = False
-        logo_path = config.get("logo")
-        if logo_path and os.path.exists(logo_path):
-            try:
-                logo = Image(logo_path, width=config["ancho"]*inch, height=0.8*inch)
-                t_head = Table([[logo, Paragraph("<b>ESTADO DE CUENTA - SALDO DIARIO</b><br/><font size=8 color='#7F8C8D'>Desglose de amortizaciones e intereses a la fecha</font>", title_style)]], colWidths=[2.5*inch, 4.9*inch])
-                t_head.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('ALIGN', (0,0), (0,0), 'LEFT')]))
-                elements.append(t_head)
-                logo_cargado = True
-            except Exception as img_err:
-                logger.warning(f"No se pudo cargar la imagen del logo en PDF: {img_err}")
-
-        if not logo_cargado:
-            elements.append(Paragraph("<b>ESTADO DE CUENTA - SALDO DIARIO</b>", title_style))
-        
+        # 2. Encabezado en Texto Puro (Evita crash nativo de Pillow/C-lib con PNGs transparentes)
+        elements.append(Paragraph("<b>LENDER FINANZAS</b>", ParagraphStyle('Empresa', parent=styles['Normal'], fontSize=12, leading=14, fontName='Helvetica-Bold', textColor=colors.HexColor('#2C3E50'))))
+        elements.append(Paragraph("<b>ESTADO DE CUENTA - SALDO DIARIO</b><br/><font size=8 color='#7F8C8D'>Desglose detallado de amortizaciones e intereses</font>", title_style))
         elements.append(Spacer(1, 15))
 
-        # 2. Información General
-        tasas = datos_desglose.get("tasas_aplicadas", {})
+        # 3. Información General
+        tasas = datos_desglose.get("tasas_aplicadas", {}) if isinstance(datos_desglose, dict) else {}
         dui_val = getattr(persona, 'dui', 'N/A') if persona else 'N/A'
-        
-        # Extracción segura de ID de Crédito
-        cred_id = getattr(credito, 'credito_id', None) or getattr(credito, 'id', 'N/A')
-        dia_pago_val = getattr(credito, 'dia_pago', 'N/A')
+        cred_id = getattr(credito, 'credito_id', None) or getattr(credito, 'id', 'N/A') if credito else 'N/A'
+        dia_pago_val = getattr(credito, 'dia_pago', 'N/A') if credito else 'N/A'
+        cliente_nom = datos_desglose.get('cliente', 'N/A') if isinstance(datos_desglose, dict) else 'N/A'
 
         info_general = [
             [
-                Paragraph(f"<b>Cliente:</b> {datos_desglose.get('cliente', 'N/A')}", cell_style),
+                Paragraph(f"<b>Cliente:</b> {cliente_nom}", cell_style),
                 Paragraph(f"<b>Crédito ID:</b> {cred_id}", cell_style),
                 Paragraph(f"<b>Fecha Corte:</b> {self._fmt_fecha(datos_desglose.get('fecha_corte'))}", cell_style)
             ],
@@ -486,7 +474,7 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         elements.append(t_info)
         elements.append(Spacer(1, 15))
 
-        # 3. Tabla de Amortización por Tramos
+        # 4. Tabla de Amortización por Tramos
         headers = [
             Paragraph("Período / Rango", cell_header_style),
             Paragraph("Días", cell_header_style),
@@ -499,10 +487,10 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         ]
         
         tramos_table_data = [headers]
-        tramos = datos_desglose.get("desglose_tramos", [])
+        tramos = datos_desglose.get("desglose_tramos", []) if isinstance(datos_desglose, dict) else []
 
         for t in tramos:
-            pago = t.get("pago_recibido", {})
+            pago = t.get("pago_recibido", {}) if isinstance(t, dict) else {}
             f_inicio = self._fmt_fecha(t.get('fecha_inicio'))
             f_fin = self._fmt_fecha(t.get('fecha_fin'))
             
@@ -519,7 +507,6 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
             tramos_table_data.append(row)
 
         t_tramos = Table(tramos_table_data, colWidths=[1.4*inch, 0.4*inch, 0.9*inch, 0.9*inch, 0.9*inch, 0.9*inch, 1.0*inch, 1.0*inch])
-        
         t_style = [
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2C3E50')),
             ('ALIGN', (0,0), (-1,0), 'CENTER'),
@@ -535,9 +522,9 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         elements.append(t_tramos)
         elements.append(Spacer(1, 15))
 
-        # 4. Tramo Acumulado Actual y Resumen Final
-        resumen = datos_desglose.get("resumen_saldo", {})
-        tramo_act = datos_desglose.get("tramo_actual", {})
+        # 5. Resumen Final
+        resumen = datos_desglose.get("resumen_saldo", {}) if isinstance(datos_desglose, dict) else {}
+        tramo_act = datos_desglose.get("tramo_actual", {}) if isinstance(datos_desglose, dict) else {}
         
         f_act_inc = self._fmt_fecha(tramo_act.get('fecha_inicio'))
         f_act_fin = self._fmt_fecha(tramo_act.get('fecha_fin'))
@@ -569,7 +556,7 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         ]))
         elements.append(t_resumen)
 
-        # 5. Pie de página
+        # 6. Pie de página
         elements.append(Spacer(1, 15))
         elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceBefore=5, spaceAfter=5))
         fecha_emision = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
