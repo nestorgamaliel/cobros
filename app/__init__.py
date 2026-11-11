@@ -18,6 +18,7 @@ finiquito_service = None
 estado_cuenta_service = None
 saldo_diario_service = None
 reestructuracion_service = None
+estado_cuenta_diario_service = None
 
 
 def create_app(test_config=None):
@@ -37,20 +38,20 @@ def create_app(test_config=None):
     # 3. Inicializar servicios de negocio y base de datos
     inicializar_servicios()
     
-    # 4. Registrar rutas (Blueprint)
+    # 4. Registrar rutas (Blueprint) mediante kwargs para evitar desfasamientos
     from app.api.routes import init_routes
     
-    # Inyección de los 7 servicios en el orden posicional exacto
     app.register_blueprint(
         init_routes(
-            pago_service, 
-            persona_service, 
-            credito_service, 
-            vendedor_service, 
-            finiquito_service,
-            estado_cuenta_service,
-            saldo_diario_service,
-            reestructuracion_service
+            servicio_pagos=pago_service, 
+            servicio_personas=persona_service, 
+            servicio_creditos=credito_service, 
+            servicio_vendedores=vendedor_service, 
+            servicio_finiquitos=finiquito_service,
+            servicio_estado_cuenta=estado_cuenta_service,
+            servicio_saldo_diario=saldo_diario_service,
+            servicio_reestructuracion=reestructuracion_service,
+            servicio_estado_cuenta_diario=estado_cuenta_diario_service
         ),
         url_prefix='/api'
     )
@@ -69,9 +70,9 @@ def create_app(test_config=None):
 
 def inicializar_servicios():
     """Inicializa los servicios centralizados inyectando las dependencias necesarias."""
-    global db_service, pdf_service, pago_service, persona_service, credito_service, vendedor_service, finiquito_service, estado_cuenta_service, saldo_diario_service
-    global reestructuracion_service
-
+    global db_service, pdf_service, pago_service, persona_service, credito_service
+    global vendedor_service, finiquito_service, estado_cuenta_service, saldo_diario_service
+    global reestructuracion_service, estado_cuenta_diario_service
 
     try:
         from app.services.db_service import BaseDatos
@@ -84,6 +85,7 @@ def inicializar_servicios():
         from app.services.estado_cuenta_service import EstadoCuentaService
         from app.services.saldo_diario_service import ServicioSaldoDiario
         from app.services.reestructuracion_service import ReestructuracionService
+        from app.services.estado_cuenta_diario_service import EstadoCuentaDiarioService
 
         # 1. Servicios base de infraestructura
         db_service = BaseDatos(settings.SQLALCHEMY_DATABASE_URI)
@@ -98,6 +100,7 @@ def inicializar_servicios():
         estado_cuenta_service = EstadoCuentaService(db_service)
         saldo_diario_service = ServicioSaldoDiario(db_service)
         reestructuracion_service = ReestructuracionService(db_service)
+        estado_cuenta_diario_service = EstadoCuentaDiarioService(db_service)
 
         logger.info("Todos los servicios han sido cargados correctamente")
         
@@ -115,3 +118,4 @@ def get_credito_service(): return credito_service
 def get_finiquito_service(): return finiquito_service
 def get_estado_cuenta_service(): return estado_cuenta_service
 def get_saldo_diario_service(): return saldo_diario_service
+def get_estado_cuenta_diario_service(): return estado_cuenta_diario_service

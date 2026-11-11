@@ -9,7 +9,8 @@
 │   ├── __init__.py
 │   ├── api
 │   │   ├── __init__.py
-│   │   └── routes.py
+│   │   ├── routes.py
+│   │   └── routes_old.py
 │   ├── models
 │   │   ├── __init__.py
 │   │   └── models.py
@@ -23,12 +24,15 @@
 │   │   ├── __init__.py
 │   │   ├── credito_service.py
 │   │   ├── db_service.py
+│   │   ├── estado_cuenta_diario_service.py
 │   │   ├── estado_cuenta_service.py
 │   │   ├── finiquito_service.py
 │   │   ├── notificacion_service.py
 │   │   ├── pago_service.py
 │   │   ├── pdf_service.py
 │   │   ├── persona_service.py
+│   │   ├── reestructuracion_service.py
+│   │   ├── saldo_diario_service.py
 │   │   ├── vendedor_service.py
 │   │   └── whatsapp_service.py
 │   └── utils
@@ -39,9 +43,11 @@
 ├── config.py
 ├── crear_estructura.sh
 ├── credito_gestion.erd
+├── creditos_daniel_saldo_real.csv
 ├── env.yaml
 ├── estructura.txt
 ├── instrucciones.txt
+├── listado_creditos_saldos.py
 ├── llaves.txt
 ├── migrations
 │   ├── README
@@ -55,6 +61,7 @@
 │       ├── 5d5b5a653ffc_boolean.py
 │       ├── 6998ebe3ca93_renombrar_comisiones_a_credito_.py
 │       ├── 6a40ebc5087f_prueba_conexion.py
+│       ├── 7da19186112b_crear_tablas_reestructuracion_credito.py
 │       ├── b55e1cdc9872_refactor_total_a_integer_y_comisiones.py
 │       └── d52d2ddf963c_agregar_columna_monto_cancelado_a_.py
 ├── recibos
@@ -71,4 +78,4 @@
 ├── run.py
 └── wsgi.py
 
-11 directories, 61 files
+11 directories, 68 files
