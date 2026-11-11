@@ -4,14 +4,14 @@ from flask import Flask
 from config import settings
 from app.utils.logger import setup_logger
 
-# Importación de servicios
+# Importación explícita de los servicios
 from app.services.estado_cuenta_service import EstadoCuentaService
 from app.services.estado_cuenta_diario_service import EstadoCuentaDiarioService
 from app.services.saldo_diario_service import ServicioSaldoDiario
 
 logger = setup_logger(__name__)
 
-# Singletons globales
+# Singletons globales para los servicios
 db_service = None
 pdf_service = None
 pago_service = None
@@ -87,13 +87,14 @@ def create_app(test_config=None):
     logger.info(f"Verificando servicios para rutas: {[s is not None for s in servicios_check]}")
 
     if all(servicios_check):
+        # Invocación con argumentos nombrados (kwargs) para evitar desfasamientos posicionales
         api_bp = init_routes(
-            pago_service, 
-            persona_service, 
-            credito_service, 
-            vendedor_service,
-            finiquito_service,     
-            estado_cuenta_service,
+            servicio_pagos=pago_service, 
+            servicio_personas=persona_service, 
+            servicio_creditos=credito_service, 
+            servicio_vendedores=vendedor_service,
+            servicio_finiquitos=finiquito_service,     
+            servicio_estado_cuenta=estado_cuenta_service,
             servicio_saldo_diario=saldo_diario_service,
             servicio_estado_cuenta_diario=estado_cuenta_diario_service
         )
@@ -128,4 +129,4 @@ def get_pago_service(): return pago_service
 def get_persona_service(): return persona_service
 def get_credito_service(): return credito_service
 def get_saldo_diario_service(): return saldo_diario_service
-def get_estado_cuenta_diario_service(): return estado_cuenta_diario_service
+def
