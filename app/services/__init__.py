@@ -129,4 +129,4 @@ def get_pago_service(): return pago_service
 def get_persona_service(): return persona_service
 def get_credito_service(): return credito_service
 def get_saldo_diario_service(): return saldo_diario_service
-def
+def get_estado_cuenta_diario_service(): return estado_cuenta_diario_service
