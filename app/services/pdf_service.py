@@ -436,7 +436,7 @@ class GeneradorEstadoCuentaDiario(GeneradorDocumentos):
         elements = []
 
         # 2. Encabezado en Texto Puro (Evita crash nativo de Pillow/C-lib con PNGs transparentes)
-        elements.append(Paragraph("<b>LENDER FINANZAS</b>", ParagraphStyle('Empresa', parent=styles['Normal'], fontSize=12, leading=14, fontName='Helvetica-Bold', textColor=colors.HexColor('#2C3E50'))))
+        elements.append(Paragraph("<b>LENDER</b>", ParagraphStyle('Empresa', parent=styles['Normal'], fontSize=12, leading=14, fontName='Helvetica-Bold', textColor=colors.HexColor('#2C3E50'))))
         elements.append(Paragraph("<b>ESTADO DE CUENTA - SALDO DIARIO</b><br/><font size=8 color='#7F8C8D'>Desglose detallado de amortizaciones e intereses</font>", title_style))
         elements.append(Spacer(1, 15))
 
